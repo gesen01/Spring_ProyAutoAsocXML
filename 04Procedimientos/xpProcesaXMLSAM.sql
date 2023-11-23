@@ -31,6 +31,7 @@ BEGIN
 	   @RutaProcPDF    VARCHAR(1500),
 	   @CadenaXML	VARCHAR(MAX),
 	   @XML        XML,
+	   @Folio      VARCHAR(15),
 	   @UUID       VARCHAR(50),
 	   @Fecha      DATETIME,
 	   @TipoComprobante    VARCHAR(10),
@@ -152,7 +153,7 @@ BEGIN
           	    --Se prepara el XML para su lectura
           	     DECLARE @hdoc int
                     EXEC sp_xml_preparedocument @hdoc OUTPUT,@XML
-          	         	
+                     	
           	    --Se obtiene el UUID del documento XML
           	    SELECT @UUID=UUID
           	    FROM OPENXML (@hdoc, '/Comprobante/Complemento/TimbreFiscalDigital',1)
@@ -163,8 +164,10 @@ BEGIN
                    SELECT @Fecha= Fecha
                          ,@TipoComprobante=TipoDeComprobante
                          ,@Total=Total
+                         ,@Folio=Folio
                    FROM OPENXML (@hdoc, '/Comprobante',1)
                    WITH (
+                   	    Folio               VARCHAR(100),
                         Fecha               DATETIME,
                         TipoDeComprobante   VARCHAR(100),
                         Total               FLOAT
@@ -175,7 +178,7 @@ BEGIN
                    WITH (
                         Rfc   VARCHAR(30)
                    )
-                             
+                                                
                    --Se realiza la validacion para saber si existe el UUID en la tabla SATXML se mueve a validados y se inserta en la tabla de datos
                    IF EXISTS(SELECT 1 FROM SatXml AS sx WHERE sx.FolioFiscal=@UUID)
                    BEGIN
@@ -184,8 +187,8 @@ BEGIN
                         SET @RutaProcPDF=@RutaValido+'\'+SUBSTRING(@NombreDoc,1,CHARINDEX('.',@NombreDoc,1))+'PDF'
                	    
                	    --Se insertan datos en la tabla a utilizar oara la asocioacion de movimientos
-               	    INSERT INTO AsociadoXMLSAM(Nombre,Importe,RFC,Tipo,UUID,FechaTimbrado,FechaRegistro,Asociado)
-               	                    SELECT @NombreDoc,@Total,@RFCProv,@TipoComprobante,@UUID,@Fecha,CAST(GETDATE() AS DATE),0
+               	    INSERT INTO AsociadoXMLSAM(Nombre,Folio,Importe,RFC,Tipo,UUID,FechaTimbrado,FechaRegistro,Asociado)
+               	                    SELECT @NombreDoc,@Folio,@Total,@RFCProv,@TipoComprobante,@UUID,@Fecha,CAST(GETDATE() AS DATE),0
                	    
                	    --Se copian los documentos PDF y XML a la carpeta de validos
                	    SET @CMD='COPY '+@RutaDocXML+' '+@RutaProcXML
