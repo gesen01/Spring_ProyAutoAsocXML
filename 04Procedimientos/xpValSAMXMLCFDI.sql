@@ -106,8 +106,7 @@ DECLARE
 @DiferenciaCentavos		decimal(18,6),
 @CfgDecimales			INT,
 @ArchivoXML		     XML,
-@TipoCambioInt			FLOAT,
-@ClaveUsoCFD			VARCHAR(10)
+@TipoCambioInt			FLOAT
 SELECT @CfgDecimales = ISNULL(Decimales,2) FROM EmpresaCFD WHERE Empresa = @Empresa
 SELECT @NameSpace = REPLACE(@XML COLLATE Latin1_General_100_CI_AI,'<?xml version="1.0" encoding="Windows-1252" ?>','')
 SELECT @NameSpace = SUBSTRING(@NameSpace COLLATE Latin1_General_100_CI_AI, 1 , PATINDEX('%version=%',@NameSpace COLLATE Latin1_General_100_CI_AI)-1)+'/>'
@@ -339,24 +338,24 @@ FROM	OPENXML (@iDatos, 'cfdi:Comprobante/cfdi:Emisor', 1) WITH (	[Rfc]			varchar
 IF @Ok IS NULL
 BEGIN
 IF EXISTS(SELECT FiscalRegimen FROM FiscalRegimen WHERE FiscalRegimen = @RegimenFiscal AND TipoPersonaMoral COLLATE Latin1_General_100_CI_AI = 'SI')
-IF @RFC NOT LIKE '[A-Z&][A-Z&][A-Z&][0-9][0-9][0-9][0-9][0-9][0-9][0-Z&][0-Z&][0-Z&]'
+IF dbo.ValidaRFC(@RFC) <> 1
 IF @RegimenFiscal <> '622'
 SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: '+ ISNULL(@RFC,'')
 FROM MensajeLista
 WHERE Mensaje = 80325
 ELSE
-IF @RFC NOT LIKE '[A-Z&][A-Z&][A-Z&][A-Z&][0-9][0-9][0-9][0-9][0-9][0-9][0-Z&][0-Z&][0-Z&]'
+IF dbo.ValidaRFC(@RFC) <> 1
 SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(@RFC,'')
 FROM MensajeLista
 WHERE Mensaje = 80325
 IF EXISTS(SELECT FiscalRegimen FROM FiscalRegimen WHERE FiscalRegimen = @RegimenFiscal AND TipoPersonaFisica COLLATE Latin1_General_100_CI_AI = 'SI')
-IF @RFC NOT LIKE '[A-Z&][A-Z&][A-Z&][A-Z&][0-9][0-9][0-9][0-9][0-9][0-9][0-Z&][0-Z&][0-Z&]'
+IF dbo.ValidaRFC(@RFC) <> 1
 IF @RegimenFiscal <> '622'
 SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(@RFC,'')
 FROM MensajeLista
 WHERE Mensaje = 80325
 ELSE
-IF @RFC NOT LIKE '[A-Z&][A-Z&][A-Z&][0-9][0-9][0-9][0-9][0-9][0-9][0-Z&][0-Z&][0-Z&]'
+IF dbo.ValidaRFC(@RFC) <> 1
 SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(@RFC,'')
 FROM MensajeLista
 WHERE Mensaje = 80325
@@ -388,8 +387,6 @@ FROM	OPENXML (@iDatos, 'cfdi:Comprobante/cfdi:Receptor', 1) WITH ([Rfc]				varch
 [NumRegIdTrib]		varchar(40),
 [UsoCFDI]			varchar(3)
 )
-
-
 IF @RfcReceptor NOT LIKE '[A-Z&][A-Z&][A-Z&][0-9][0-9][0-9][0-9][0-9][0-9][0-Z&][0-Z&][0-Z&]' AND
 @RfcReceptor NOT LIKE '[A-Z&][A-Z&][A-Z&][A-Z&][0-9][0-9][0-9][0-9][0-9][0-9][0-Z&][0-Z&][0-Z&]'
 SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(@RfcReceptor,'')
@@ -402,12 +399,10 @@ SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(@ResidenciaFisca
 FROM MensajeLista
 WHERE Mensaje = 80328
 END
-
 IF @Ok IS NULL AND NOT EXISTS(SELECT ClaveUsoCFDI FROM SATCatUsoCFDI WHERE ClaveUsoCFDI = @UsoCFDI)
-	   SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(@UsoCFDI,'')
-	   FROM MensajeLista
-	   WHERE Mensaje = 80329
-
+SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(@UsoCFDI,'')
+FROM MensajeLista
+WHERE Mensaje = 80329
 IF PATINDEX('%<cce:ComercioExterior>%',@XML) > 0
 BEGIN
 IF NULLIF(@NumRegIDTrib,' ') IS NULL
