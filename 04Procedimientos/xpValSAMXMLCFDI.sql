@@ -5,8 +5,7 @@ SET LOCK_TIMEOUT -1
 SET QUOTED_IDENTIFIER OFF
 GO
 
-IF EXISTS(SELECT * FROM sysobjects WHERE TYPE='p' AND NAME='xpValSAMXMLCFDI')
-DROP PROCEDURE xpValSAMXMLCFDI
+IF EXISTS(SELECT * FROM sysobjects WHERE TYPE='p' AND NAME='xpValSAMXMLCFDI') DROP PROCEDURE xpValSAMXMLCFDI
 GO
 CREATE PROCEDURE xpValSAMXMLCFDI
 (@Empresa		varchar(5),
@@ -154,7 +153,12 @@ FROM	OPENXML (@iDatos, 'cfdi:Comprobante', 1) WITH (	[Version]			varchar(5),
 [Confirmacion]		varchar(20)
 )
 
-SELECT @TipoCambioInt=m.TipoCambio FROM Mon AS m WHERE m.Clave=@Moneda
+SELECT @TipoCambioInt=m.TipoCambio 
+FROM Mon AS m 
+WHERE LTRIM(RTRIM(m.Moneda))= CASE @Moneda
+								WHEN 'MXN' THEN 'Pesos'
+								ELSE @Moneda
+								END
 
 IF @Ok IS NULL AND @Version NOT IN ('3.2','3.3','4.0')
 SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: '+ CAST(ISNULL(@Version,'') as varchar(5))
@@ -235,7 +239,7 @@ FROM MensajeLista
 WHERE Mensaje = 80314
 ELSE
 BEGIN
---SELECT @Version,@Moneda,@TipoCambio
+--SELECT @Version,@Moneda,@TipoCambio,@TipoCambioInt
 IF @Moneda = 'MXN' AND ISNULL(ROUND(@TipoCambio,0),1) <> @TipoCambioInt
 SELECT @Ok = Mensaje, @OkRef = Descripcion +' Moneda:'+@Moneda+' Valor: '+ CAST(ISNULL(@TipoCambio,0) as varchar(18))
 FROM MensajeLista
@@ -540,7 +544,7 @@ FROM	OPENXML (@iDatos, 'cfdi:Comprobante/cfdi:Conceptos/cfdi:Concepto/cfdi:Impue
 WITH ([Base]				decimal(18,6)	'@Base',
 [Impuesto]			varchar(3)		'@Impuesto',
 [TipoFactor]			varchar(6)		'@TipoFactor',
-[TasaOCuota]			varchar(5)		'@TasaOCuota',
+[TasaOCuota]			varchar(10)		'@TasaOCuota',
 [Importe]				decimal(18,6)	'@Importe'
 )
 OPEN cRetencion
@@ -559,10 +563,15 @@ IF @RetencionTipoFactor NOT IN (SELECT Descripcion FROM SATCatTipoFactor WHERE D
 SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(@RetencionTipoFactor,'')
 FROM MensajeLista
 WHERE Mensaje = 80346
-IF @RetencionTasaOCuota NOT IN (SELECT ROUND(ValMax,3) FROM SATCatTasaOCuota WHERE ROUND(ValMax,3) = CAST(@RetencionTasaOCuota as varchar(10)) AND Factor = @RetencionTipoFactor AND Retencion = 1)
-SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(@RetencionTasaOCuota,'')
-FROM MensajeLista
-WHERE Mensaje = 80347
+--IF @RetencionTasaOCuota NOT IN (SELECT ROUND(ValMax,3) FROM SATCatTasaOCuota WHERE ValMax = CAST(@RetencionTasaOCuota as varchar(10)) AND Factor = @RetencionTipoFactor AND Retencion = 1)
+IF NOT EXISTS(SELECT 1 FROM SATCatTasaOCuota WHERE ValMax = CAST(@RetencionTasaOCuota as varchar(10)) AND Factor = @RetencionTipoFactor AND Retencion = 1)
+INSERT INTO SATCatTasaOCuota(Rango, ValMax, Impuesto, Factor, Traslado, Retencion)
+				SELECT 'Rango',CAST(@RetencionTasaOCuota as varchar(10)),Descripcion,@RetencionTipoFactor,Traslado,Retencion
+				FROM SATTipoImpuesto
+				WHERE Clave=@RetencionImpuesto
+--SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(@RetencionTasaOCuota,'')
+--FROM MensajeLista
+--WHERE Mensaje = 80347
 IF @RetencionImporte < 0.000000
 SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + CAST(@RetencionImporte as varchar(25))
 FROM MensajeLista

@@ -2,8 +2,9 @@
   "ExpandedNodes": [
     "",
     "\\01Tablas",
+    "\\03Funciones",
     "\\04Procedimientos"
   ],
-  "SelectedNode": "\\01Tablas\\ModTablaSATCatTasaOCuota.sql",
+  "SelectedNode": "\\04Procedimientos\\xpProcesaXMLSAM.sql",
   "PreviewInSolutionExplorer": false
 }
