@@ -4,16 +4,17 @@ SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
 SET LOCK_TIMEOUT -1
 SET QUOTED_IDENTIFIER OFF
 GO
-
-IF EXISTS(SELECT * FROM sysobjects WHERE TYPE='p' AND NAME='xpValSAMXMLCFDI') DROP PROCEDURE xpValSAMXMLCFDI
+--EXEC xpProcesaXMLSAM 'SHMEX'
+IF EXISTS(SELECT * FROM sysobjects WHERE TYPE='P' AND NAME='xpValSAMXMLCFDI')
+DROP PROCEDURE xpValSAMXMLCFDI
 GO
 CREATE PROCEDURE xpValSAMXMLCFDI
-(@Empresa		varchar(5),
-@XML			nvarchar(max) OUTPUT,
-@Ok			int = NULL OUTPUT,
-@OkRef			varchar(255) = NULL OUTPUT
-)
-WITH ENCRYPTION
+			(@Empresa	varchar(5),
+			@XML		nvarchar(max) OUTPUT,
+			@Ok			int = NULL OUTPUT,
+			@OkRef		varchar(255) = NULL OUTPUT
+			)
+ 
 AS
 BEGIN
 DECLARE
@@ -53,7 +54,7 @@ DECLARE
 @NombreReceptor		varchar(254),
 @ResidenciaFiscal	varchar(3),
 @NumRegIDTrib		varchar(40),
-@UsoCFDI			varchar(3),
+@UsoCFDI			varchar(10),
 @Concepto			varchar(max),
 @CptoClaveProdServ	varchar(8),
 @CptoNoIden			varchar(100),
@@ -152,13 +153,7 @@ FROM	OPENXML (@iDatos, 'cfdi:Comprobante', 1) WITH (	[Version]			varchar(5),
 [LugarExpedicion]	varchar(5),
 [Confirmacion]		varchar(20)
 )
-
-SELECT @TipoCambioInt=m.TipoCambio 
-FROM Mon AS m 
-WHERE LTRIM(RTRIM(m.Moneda))= CASE @Moneda
-								WHEN 'MXN' THEN 'Pesos'
-								ELSE @Moneda
-								END
+SELECT @TipoCambioInt=m.TipoCambio FROM Mon AS m WHERE m.Clave=@Moneda
 
 IF @Ok IS NULL AND @Version NOT IN ('3.2','3.3','4.0')
 SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: '+ CAST(ISNULL(@Version,'') as varchar(5))
@@ -239,7 +234,7 @@ FROM MensajeLista
 WHERE Mensaje = 80314
 ELSE
 BEGIN
---SELECT @Version,@Moneda,@TipoCambio,@TipoCambioInt
+--SELECT @Version,@Moneda,@TipoCambio
 IF @Moneda = 'MXN' AND ISNULL(ROUND(@TipoCambio,0),1) <> @TipoCambioInt
 SELECT @Ok = Mensaje, @OkRef = Descripcion +' Moneda:'+@Moneda+' Valor: '+ CAST(ISNULL(@TipoCambio,0) as varchar(18))
 FROM MensajeLista
@@ -387,9 +382,9 @@ SELECT	@RfcReceptor		= [Rfc],
 @UsoCFDI			= [UsoCFDI]
 FROM	OPENXML (@iDatos, 'cfdi:Comprobante/cfdi:Receptor', 1) WITH ([Rfc]				varchar(13)  ,
 [Nombre]			varchar(254) ,
-[ResidenciaFiscal]	varchar(3),
+[ResidenciaFiscal]	varchar(10),
 [NumRegIdTrib]		varchar(40),
-[UsoCFDI]			varchar(3)
+[UsoCFDI]			varchar(10)
 )
 IF @RfcReceptor NOT LIKE '[A-Z&][A-Z&][A-Z&][0-9][0-9][0-9][0-9][0-9][0-9][0-Z&][0-Z&][0-Z&]' AND
 @RfcReceptor NOT LIKE '[A-Z&][A-Z&][A-Z&][A-Z&][0-9][0-9][0-9][0-9][0-9][0-9][0-Z&][0-Z&][0-Z&]'
@@ -403,6 +398,7 @@ SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(@ResidenciaFisca
 FROM MensajeLista
 WHERE Mensaje = 80328
 END
+
 IF @Ok IS NULL AND NOT EXISTS(SELECT ClaveUsoCFDI FROM SATCatUsoCFDI WHERE ClaveUsoCFDI = @UsoCFDI)
 SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(@UsoCFDI,'')
 FROM MensajeLista
@@ -471,10 +467,14 @@ SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(CAST(@CptoValorU
 FROM MensajeLista
 WHERE Mensaje = 80336
 IF @Ok IS NULL
-IF @CptoImporte < 0.000001
-SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(CAST(@CptoImporte AS VARCHAR(50)),'')
-FROM MensajeLista
-WHERE Mensaje = 80337
+--IGGR. validacion que permite excluir los complementos de pago de la validacion del importe en 0
+IF @TipoComprobante <> 'P'
+BEGIN
+	IF @CptoImporte < 0.000001
+	SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(CAST(@CptoImporte AS VARCHAR(50)),'')
+	FROM MensajeLista
+	WHERE Mensaje = 80337
+END
 IF @Ok IS NULL AND @CptoDescuento IS NOT NULL
 IF @CptoDescuento < 0.000000
 SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(CAST(@CptoDescuento AS VARCHAR(50)),'')
@@ -544,7 +544,7 @@ FROM	OPENXML (@iDatos, 'cfdi:Comprobante/cfdi:Conceptos/cfdi:Concepto/cfdi:Impue
 WITH ([Base]				decimal(18,6)	'@Base',
 [Impuesto]			varchar(3)		'@Impuesto',
 [TipoFactor]			varchar(6)		'@TipoFactor',
-[TasaOCuota]			varchar(10)		'@TasaOCuota',
+[TasaOCuota]			varchar(5)		'@TasaOCuota',
 [Importe]				decimal(18,6)	'@Importe'
 )
 OPEN cRetencion
@@ -563,12 +563,12 @@ IF @RetencionTipoFactor NOT IN (SELECT Descripcion FROM SATCatTipoFactor WHERE D
 SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(@RetencionTipoFactor,'')
 FROM MensajeLista
 WHERE Mensaje = 80346
---IF @RetencionTasaOCuota NOT IN (SELECT ROUND(ValMax,3) FROM SATCatTasaOCuota WHERE ValMax = CAST(@RetencionTasaOCuota as varchar(10)) AND Factor = @RetencionTipoFactor AND Retencion = 1)
 IF NOT EXISTS(SELECT 1 FROM SATCatTasaOCuota WHERE ValMax = CAST(@RetencionTasaOCuota as varchar(10)) AND Factor = @RetencionTipoFactor AND Retencion = 1)
 INSERT INTO SATCatTasaOCuota(Rango, ValMax, Impuesto, Factor, Traslado, Retencion)
 				SELECT 'Rango',CAST(@RetencionTasaOCuota as varchar(10)),Descripcion,@RetencionTipoFactor,Traslado,Retencion
 				FROM SATTipoImpuesto
 				WHERE Clave=@RetencionImpuesto
+--IF @RetencionTasaOCuota NOT IN (SELECT ROUND(ValMax,3) FROM SATCatTasaOCuota WHERE ROUND(ValMax,3) = CAST(@RetencionTasaOCuota as varchar(10)) AND Factor = @RetencionTipoFactor AND Retencion = 1)
 --SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(@RetencionTasaOCuota,'')
 --FROM MensajeLista
 --WHERE Mensaje = 80347
@@ -782,4 +782,4 @@ SELECT @DiferenciaCentavos = ((@Subtotal - @Descuento)+(@TotalImpTrasladados-@To
 SELECT @XML = REPLACE(@XML, dbo.fnXMLDecimal('Total',@Total, @CfgDecimales), dbo.fnXMLDecimal('Total',ISNULL(@Subtotal,0)-ISNULL(@Descuento,0)+(ISNULL(@TotalImpTrasladados,0)-ISNULL(@TotalImpRetenidos,0)), @CfgDecimales))
 END
 END
-GO
+
