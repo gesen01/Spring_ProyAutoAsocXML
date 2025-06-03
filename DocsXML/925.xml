@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cfdi:Comprobante xsi:schemaLocation="http://www.sat.gob.mx/cfd/4 http://www.sat.gob.mx/sitio_internet/cfd/4/cfdv40.xsd" Version="4.0" Fecha="2023-08-22T09:49:16" Sello="Z4bhcpwTd2+uC2oCXJLwSxY74et9esOA7Pf+nEo5RR1Sb1VA8H/ho0684HhOsJkrPPKhO9HTQLo1NHKc0z+lA6key4MY1SVcqCZgl/9sR+L4fJ9Sg1prBjNN4RuihnY1dcpVZyuKLN44VIe/HDQF2O3M9MnsyaMlJvfDTiI09qL6Pl/fp+fxY6/5B6ashvGoSfPlIo7cEHDoMRevBCWgISHouXSQY6sJwDx1w8dz3lZ0NzmwKcreQB38mcnqU1XTVa0M0EkiB1WwvhwT3izwGo7ZqpdMau1wLlFHPtQE/TtrPzyy8qVRM2E3rIPFc6Y7nopFR7d58Kmq4FE74yysRw==" FormaPago="03" NoCertificado="00001000000512297306" Certificado="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" SubTotal="23731.25" Moneda="MXN" Total="27528.25" TipoDeComprobante="I" Exportacion="01" MetodoPago="PUE" LugarExpedicion="55712" xmlns:cfdi="http://www.sat.gob.mx/cfd/4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <cfdi:Emisor Rfc="AAGI730907IN5" Nombre="ILIANA ALFARO GOMEZ DEL VILLAR" RegimenFiscal="621" />
+  <cfdi:Receptor Rfc="SAM910515AC7" Nombre="SPRING AIR MEXICO" DomicilioFiscalReceptor="52000" RegimenFiscalReceptor="601" UsoCFDI="G03" />
+  <cfdi:Conceptos>
+    <cfdi:Concepto ClaveProdServ="14111704" Cantidad="20.00" ClaveUnidad="XBX" Unidad="Caja" Descripcion="PAPEL HIGIENICO BOBINA C/12 DE 200MTS" ValorUnitario="648" Importe="12960.00" ObjetoImp="02">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="12960.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="2073.60" />
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+    <cfdi:Concepto ClaveProdServ="53131608" Cantidad="1.00" ClaveUnidad="H87" Unidad="Pieza" Descripcion="SHAMPOO P/MANOS C/20 LTS" ValorUnitario="700" Importe="700.00" ObjetoImp="02">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="700.00" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="112.00" />
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+    <cfdi:Concepto ClaveProdServ="14111703" Cantidad="25.00" ClaveUnidad="XBX" Unidad="Caja" Descripcion="TOALLA EN ROLLO BLANCA C/6 ROLLOS DE 180MTS C/U" ValorUnitario="402.85" Importe="10071.25" ObjetoImp="02">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="10071.25" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="1611.40" />
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+  </cfdi:Conceptos>
+  <cfdi:Impuestos TotalImpuestosTrasladados="3797.00">
+    <cfdi:Traslados>
+      <cfdi:Traslado Base="23731.25" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="3797.00" />
+    </cfdi:Traslados>
+  </cfdi:Impuestos>
+  <cfdi:Complemento>
+    <tfd:TimbreFiscalDigital xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital" xsi:schemaLocation="http://www.sat.gob.mx/TimbreFiscalDigital http://www.sat.gob.mx/sitio_internet/cfd/TimbreFiscalDigital/TimbreFiscalDigitalv11.xsd" Version="1.1" UUID="1BC5FB38-2900-47FE-B650-5B856BE5998F" FechaTimbrado="2023-08-22T09:49:57" RfcProvCertif="SAT970701NN3" SelloCFD="Z4bhcpwTd2+uC2oCXJLwSxY74et9esOA7Pf+nEo5RR1Sb1VA8H/ho0684HhOsJkrPPKhO9HTQLo1NHKc0z+lA6key4MY1SVcqCZgl/9sR+L4fJ9Sg1prBjNN4RuihnY1dcpVZyuKLN44VIe/HDQF2O3M9MnsyaMlJvfDTiI09qL6Pl/fp+fxY6/5B6ashvGoSfPlIo7cEHDoMRevBCWgISHouXSQY6sJwDx1w8dz3lZ0NzmwKcreQB38mcnqU1XTVa0M0EkiB1WwvhwT3izwGo7ZqpdMau1wLlFHPtQE/TtrPzyy8qVRM2E3rIPFc6Y7nopFR7d58Kmq4FE74yysRw==" NoCertificadoSAT="00001000000504465028" SelloSAT="Pe7Mn67hmGJJYzKaT7uuaCrsW36AEVdrZ2QAS1vZPS3xAtrjSmSM+hY0+BCb4WLOjp00vXui9lecL++qtXLa7J/CBxmUrklBbAzInPu9v01Gp+IhxLSNfr/gT1ebOP1QFchZDHbz6ecFF1T6in/5H/2sOLA5vpWy6mjl02TFL01effgiz8AXjUSDXAN1Djm8turrX++AVMQU7VMZZO3qrTkT15iFJn2x4qqzjcyb9yUHfh4/+KMI2JY6X2CpLbwMcm9MRCKoyBRFbuVgRCbOghGHNeZ7xRkcMnlBM/sRBQ954pWO1vaOKaFMNxU7kB8P7aXwJtk/xGtmVRQOSSU4gA==" />
+  </cfdi:Complemento>
+</cfdi:Comprobante>

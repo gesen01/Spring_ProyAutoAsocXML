@@ -2,8 +2,11 @@
   "ExpandedNodes": [
     "",
     "\\01Tablas",
-    "\\04Procedimientos"
+    "\\04Procedimientos",
+    "\\DocsXML\\Repositorio",
+    "\\DocsXML\\Repositorio\\MOEA8410143U2",
+    "\\DocsXML\\Repositorio\\MOEA8410143U2\\Invalidos"
   ],
-  "SelectedNode": "\\01Tablas\\ModTablaSATCatTasaOCuota.sql",
+  "SelectedNode": "\\04Procedimientos\\xpSAMValidaCFDEsp.sql",
   "PreviewInSolutionExplorer": false
 }

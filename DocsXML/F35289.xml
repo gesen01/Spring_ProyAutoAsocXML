@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="UTF-8"?><cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Certificado="MIIGDDCCA/SgAwIBAgIUMDAwMDEwMDAwMDA3MDUxMzEwMjEwDQYJKoZIhvcNAQELBQAwggGVMTUwMwYDVQQDDCxBQyBERUwgU0VSVklDSU8gREUgQURNSU5JU1RSQUNJT04gVFJJQlVUQVJJQTEuMCwGA1UECgwlU0VSVklDSU8gREUgQURNSU5JU1RSQUNJT04gVFJJQlVUQVJJQTEaMBgGA1UECwwRU0FULUlFUyBBdXRob3JpdHkxMjAwBgkqhkiG9w0BCQEWI3NlcnZpY2lvc2FsY29udHJpYnV5ZW50ZUBzYXQuZ29iLm14MSYwJAYDVQQJDB1Bdi4gSGlkYWxnbyA3NywgQ29sLiBHdWVycmVybzEOMAwGA1UEEQwFMDYzMDAxCzAJBgNVBAYTAk1YMQ0wCwYDVQQIDARDRE1YMRMwEQYDVQQHDApDVUFVSFRFTU9DMRUwEwYDVQQtEwxTQVQ5NzA3MDFOTjMxXDBaBgkqhkiG9w0BCQITTXJlc3BvbnNhYmxlOiBBRE1JTklTVFJBQ0lPTiBDRU5UUkFMIERFIFNFUlZJQ0lPUyBUUklCVVRBUklPUyBBTCBDT05UUklCVVlFTlRFMB4XDTI0MDIxNDE2NTczN1oXDTI4MDIxNDE2NTczN1owgckxIzAhBgNVBAMTGkpPU0UgQU5UT05JTyBIVUVSVEEgQ09SUkFMMSMwIQYDVQQpExpKT1NFIEFOVE9OSU8gSFVFUlRBIENPUlJBTDEjMCEGA1UEChMaSk9TRSBBTlRPTklPIEhVRVJUQSBDT1JSQUwxFjAUBgNVBC0TDUhVQ0E4MzA0MTdNNzkxGzAZBgNVBAUTEkhVQ0E4MzA0MTdITUNSUk4wNDEjMCEGA1UECxMaSk9TRSBBTlRPTklPIEhVRVJUQSBDT1JSQUwwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDbbtvnuFxNnPCUX1B9A05z+4jkhIqxlDy3qHeIuTYDVipPpEzsJ+4R9GwX75uXLmdSKYFXKQ45/96x9h2EmUAn+FffA6Pnijg8ny7buGsYiHHjTdh3j3bHdas4LVqHJ78EWKhZCBqHPtSdVMm8kziXghtC3LDMVDmqrdr+C9L9cbjakihPZjzy3mO1caR8dLqX+lqiW6eunyVfhA7ttj/RbnZVa64IExSa1ZR8DK739JXhfsWQeMkWPsxgFenmGmBpyL79FUUFFcqHE7bCNBmhzCNXVyYhy3wI7hufF/KnT1OGs3VcOihYVF3SJqlXLgKthunNJJhicWqqJceXwUPXAgMBAAGjHTAbMAwGA1UdEwEB/wQCMAAwCwYDVR0PBAQDAgbAMA0GCSqGSIb3DQEBCwUAA4ICAQB+OPskrHbNQbyO/vr4xgsqYfYWujD9P1t6Q/cYaILnVI0hUKZ+IyFdb9DYxiUXGAq9tKQUbmpPO46kQraXx6vgaCJeBPHJzne94xxMhD4alBGzzoQe81Tg+3OPIiho9P0n+/FBIpZ7XcRuAWrQn++tRgcG52h4Tf3SKIhVhjmvAKdHJIicEsrT7qM2zARWeP+2VZpbj5HO0BLFhrsoJmJpGjs350ajtsmRRxQOmh9/jmSlTjnhErAOAiRqzvG+240Opkl1/4vnRBfYWLSs0i3qGYMyChZ0Bb1mCq4oOKWaSO6h1im0RxIKRYQC1d+AvJKiPmOTHM4z1hwv7gARdEVpKyON73xmKuQtxOKv+9Gz0huqH9TJIlyLlTOP2KwK1eDWfNTCqCLnPPtJfywcyfBEwpe/5UmbWjJ4PbzD6h1FNcuZbEOkiJ+TkeRK3szWXfr4h5/jUowFcU8Rs3EadXgJWLydZahQPw+taKnhsWsfOBSCnJt4+V/2Q8w931+axfm7++gNNC4QxfLVGMapgDzl8f4ZylGzad5ldvt9cytk6Ae+0AV32xkRPYWiNBy/oMyJBGJZQxyOympzH9Vmwwni2i7IrEhDe6QqPSEFcgeKBlIpCterEsD3eQLbFg09Vx+fewPj/76sdCCfj58DeAUf6JnCiwmTCAcRRjHAJsNqNg==" CondicionesDePago="CREDITO 8 DÍAS FECHA LIMITE: 2024-07-04" Exportacion="01" Fecha="2024-07-02T09:26:48" Folio="35289" FormaPago="99" LugarExpedicion="50200" MetodoPago="PPD" Moneda="MXN" NoCertificado="00001000000705131021" Sello="Ydexm1Y90eVIWNzYeynQlo41qvlHOTp3d8t+IwIpaiDu6hRFBGTIOjJtIdBpNeMmB66kAssjcFhqqhuEVG9hfukTq3x2bjAz3fzZrl3rbJwKm1Gy9eADJFg3m75hNckrPGeVdmXxtNDylzLmsHRTc5qdogLLpOEdyKTtDQ50rs1LtZKBpNiRToRgQYJWPPeGjOzHHQoHXiTpm1X1FbmvvSo3fliIn76YqzRZOCHmAOQ43FMietJyvGYsC3K3WEjW5jN1Ic9BkKlR9kFwbZn/aNdqTycfHu8tj4bmk0WBpIlNsDIHa36eC4BAO2DISs2DDJOFoXmIQtFw0nff5pYcwg==" Serie="F" SubTotal="6913.82" TipoCambio="1" TipoDeComprobante="I" Total="8020.01" Version="4.0" xsi:schemaLocation="http://www.sat.gob.mx/cfd/4 http://www.sat.gob.mx/sitio_internet/cfd/4/cfdv40.xsd">
+  <cfdi:Emisor Nombre="JOSE ANTONIO HUERTA CORRAL" RegimenFiscal="612" Rfc="HUCA830417M79"/>
+  <cfdi:Receptor DomicilioFiscalReceptor="52000" Nombre="SPRING AIR MEXICO" RegimenFiscalReceptor="601" Rfc="SAM910515AC7" UsoCFDI="G03"/>
+  <cfdi:Conceptos>
+    <cfdi:Concepto Cantidad="2.00" ClaveProdServ="25172503" ClaveUnidad="H87" Descripcion="LLANTAS NUEVAS 11R22.5 ROADSHINE RS618A T.P." Importe="6724.14" ObjetoImp="02" Unidad="Pieza" ValorUnitario="3362.07">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="6724.14" Importe="1075.86" Impuesto="002" TasaOCuota="0.160000" TipoFactor="Tasa"/>
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+    <cfdi:Concepto Cantidad="2" ClaveProdServ="25171905" ClaveUnidad="H87" Descripcion="VÁLVULA ACERO" Importe="146.56" ObjetoImp="02" Unidad="Pieza" ValorUnitario="73.28">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="146.56" Importe="23.44" Impuesto="002" TasaOCuota="0.160000" TipoFactor="Tasa"/>
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+    <cfdi:Concepto Cantidad="2" ClaveProdServ="25171905" ClaveUnidad="H87" Descripcion="EMPAQUE PARA NEUMATICO PLACAS: LF54351 ECO: 95(juego de terminales de dirección)" Importe="43.12" ObjetoImp="02" Unidad="Pieza" ValorUnitario="21.56">
+      <cfdi:Impuestos>
+        <cfdi:Traslados>
+          <cfdi:Traslado Base="43.12" Importe="6.89" Impuesto="002" TasaOCuota="0.160000" TipoFactor="Tasa"/>
+        </cfdi:Traslados>
+      </cfdi:Impuestos>
+    </cfdi:Concepto>
+  </cfdi:Conceptos>
+  <cfdi:Impuestos TotalImpuestosTrasladados="1106.19">
+    <cfdi:Traslados>
+      <cfdi:Traslado Base="6913.82" Importe="1106.19" Impuesto="002" TasaOCuota="0.160000" TipoFactor="Tasa"/>
+    </cfdi:Traslados>
+  </cfdi:Impuestos>
+<cfdi:Complemento><tfd:TimbreFiscalDigital xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" FechaTimbrado="2024-07-02T09:26:48" NoCertificadoSAT="00001000000516053874" RfcProvCertif="FCG840618N51" SelloCFD="Ydexm1Y90eVIWNzYeynQlo41qvlHOTp3d8t+IwIpaiDu6hRFBGTIOjJtIdBpNeMmB66kAssjcFhqqhuEVG9hfukTq3x2bjAz3fzZrl3rbJwKm1Gy9eADJFg3m75hNckrPGeVdmXxtNDylzLmsHRTc5qdogLLpOEdyKTtDQ50rs1LtZKBpNiRToRgQYJWPPeGjOzHHQoHXiTpm1X1FbmvvSo3fliIn76YqzRZOCHmAOQ43FMietJyvGYsC3K3WEjW5jN1Ic9BkKlR9kFwbZn/aNdqTycfHu8tj4bmk0WBpIlNsDIHa36eC4BAO2DISs2DDJOFoXmIQtFw0nff5pYcwg==" SelloSAT="kLZP7NucfcAO//dL5p45PSThGkbOU/rXXfauQjfpm7KNg3AJN3wrmIPVDsiIvttpXt1m/hNA9G57Hc3xU7A6spDzdX4g+CftVMYfTLrnLzX4zG7tScSizfj2dFG1oN5b1LGxoNzaoCUn6+4wbGqX7yW48KHFdJy6z/whowtK13AElMqo3gk6Ahq4ZMZSU0bcSvmdX6UxdSovj/8o96Z4mzJKwnJR8LeFomaB5KMEbJus+wJd3UPRVEDhPY2+RCYUMt53bPtzs5pHs2qsWkMLhgFaDI0BDYrX0cNeEidhaVoqOtJ3r6t2RrdRKenEFa1LwNZ1JGPzEPbZbpgTE+dPXA==" UUID="A80916DF-5529-4A31-8F5D-94B6A35739AD" Version="1.1" xsi:schemaLocation="http://www.sat.gob.mx/TimbreFiscalDigital http://www.sat.gob.mx/sitio_internet/cfd/TimbreFiscalDigital/TimbreFiscalDigitalv11.xsd"/></cfdi:Complemento></cfdi:Comprobante>

@@ -1,0 +1,4 @@
+CREATE TABLE ProvDebug(
+		Prov	VARCHAR(10),
+		RFC		VARCHAR(35)	
+)
