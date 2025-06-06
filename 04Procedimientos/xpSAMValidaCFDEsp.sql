@@ -48,8 +48,9 @@ BEGIN
           SELECT @CadenaXML=REPLACE(@CadenaXML,'xmlns:','')
           SELECT @CadenaXML=REPLACE(@CadenaXML,'xsi:','')
           SELECT @CadenaXML=REPLACE(@CadenaXML,'tfd:','')
+		  SELECT @CadenaXML=REPLACE(@CadenaXML,'pago10:','')
           
-        -- SELECT LEFT(@CadenaXML,3366)
+			--SELECT LEFT(@CadenaXML,3335)
                       
           SELECT @XMLValido=CAST(@CadenaXML AS XML)
           

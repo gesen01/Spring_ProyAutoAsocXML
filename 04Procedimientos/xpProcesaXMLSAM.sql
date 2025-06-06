@@ -129,7 +129,7 @@ BEGIN
             SELECT @RutaDocXML=@Ruta+'\'+dx.ArchivoXML                
                    ,@RutaDocPDF=@Ruta+'\'+SUBSTRING(dx.ArchivoXML,1,CHARINDEX('.',dx.ArchivoXML,1))+'PDF'                
                    ,@NombreDoc=dx.ArchivoXML                
-   FROM @ArchivosXML AS dx                
+            FROM @ArchivosXML AS dx                
             WHERE dx.ID=@ContXML                
                             
             --Se realiza la insercion de los datos en la tablan #XMLData de tipo XML                
@@ -287,7 +287,7 @@ BEGIN
 						   WHERE Nombre=@NombreDoc 
 						   
 						SELECT @OK=NULL,
-					       @OKref=NULL
+					           @OKref=NULL
 						end
 					END
               END                
