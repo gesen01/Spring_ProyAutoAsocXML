@@ -57,10 +57,11 @@ DECLARE @DocsXML TABLE (
 DECLARE @ArchivosXML    TABLE (              
         ID              INT,              
         ArchivoXML      VARCHAR(255)              
-)              
+) 
+
               
 CREATE TABLE #XMLData(              
-        DocXML  XML              
+        DocXML  xml              
 )       
 
 declare @debugvalidaxml table(
@@ -114,9 +115,17 @@ BEGIN
     --Se arma la cadena para la lectura de la carpeta               
     SELECT @cmd='DIR '+@Ruta+' /B'      
                   
+    if @Debug=1
+       select @ruta as 'Ruta',@RutaValido as 'RutaValido',@RutaInvalido as 'RutaInvalido'
+            ,@cmd as 'ComandoDOS'
+            
     --Se lee la carpeta y se insertan los documentos que se tienen              
     INSERT INTO @DocsXML(DocXML)              
-	EXEC MASTER..xp_cmdshell @cmd           
+	EXEC MASTER..xp_cmdshell @cmd   
+    
+    If @Debug=1
+        select *
+        from @DocsXML
                    
     --Se insertan los documentos XML enumerados para su procesamiento              
     INSERT INTO @ArchivosXML              
@@ -127,10 +136,19 @@ BEGIN
                
     --Se contabiliza cuantos documentos xml se tienen a procesar              
     SELECT @NumDocsxML=COUNT(dx.ID)              
-    FROM @ArchivosXML AS dx              
+    FROM @ArchivosXML AS dx    
+    
+    if @Debug=1
+        select @NumDocsxML as 'NumDocsXml'
+               ,@Proveedor as 'proveedor'
+               ,@RFC as 'rfc'
                      
     --Se asigna el contador para el ciclo que analizara y validara los XML en 1                 
-    SET @ContXML=1              
+    SET @ContXML=1         
+	
+	if @Debug=1 and ISNULL(@NumDocsxML,0) > 0 
+		Select @Proveedor,@RFC, *
+		from @ArchivosXML
                   
     IF ISNULL(@NumDocsxML,0) > 0              
     BEGIN              
@@ -144,43 +162,63 @@ BEGIN
                    ,@NombreDoc=dx.ArchivoXML              
             FROM @ArchivosXML AS dx              
             WHERE dx.ID=@ContXML              
+
+			if @Debug=1
+				select *
+				FROM @ArchivosXML AS dx              
+				 WHERE dx.ID=@ContXML 
                           
             --Se realiza la insercion de los datos en la tablan #XMLData de tipo XML              
             SET @cmdSQL='INSERT INTO #XMLData              
-                                SELECT P              
-                                FROM OPENROWSET(BULK '+@Apostofre+@RutaDocXML+@Apostofre+', SINGLE_BLOB) AS Datos(P)'              
-              EXEC (@cmdSQL)                
-                                   
-              --Se asigna la variable con el texto del XML               
-              SELECT @CadenaXML=CAST(DocXML AS VARCHAR(MAX))              
-              FROM #XMLData                   
-                        
-              --Se ejecuta la validacion del XML a fin de comprobar que el documento esta correcto               
-              EXEC xpValSAMXMLCFDI @Empresa,@CadenaXML,@OK OUTPUT,@OKref OUTPUT   
+                                SELECT P               
+                                FROM OPENROWSET(BULK '+@Apostofre+@RutaDocXML+@Apostofre+', SINGLE_BLOB) AS Datos(P)' 
+			
+              EXEC (@cmdSQL)  
 
-              --Se ejecuta el validador de documentos XML que no cumplen los requisitos del primer validador
-              IF @OK IS NOT NULL
-			  begin
-                 select @ok=null,
-						@OKref=null
+              BEGIN TRY
+                  --Se asigna la variable con el texto del XML               
+                  SELECT @CadenaXML=CAST(DocXML AS VARCHAR(MAX))            
+                  FROM #XMLData      
+			  
+                  --Se ejecuta la validacion del XML a fin de comprobar que el documento esta correcto               
+                  EXEC xpValSAMXMLCFDI @Empresa,@CadenaXML,@OK OUTPUT,@OKref OUTPUT  
+			  
+			      IF @Debug=1
+                   SELECT @NombreDoc, @ok, @okref,@Proveedor   
+
+                  --Se ejecuta el validador de documentos XML que no cumplen los requisitos del primer validador
+                  IF @OK IS NOT NULL
+			      BEGIN
+                     SELECT @ok=null,
+						    @OKref=null
 				 
-				 EXEC xpSAMValidaCFDEsp @CadenaXML,@OK OUTPUT,@OKref OUTPUT                   
+				     EXEC xpSAMValidaCFDEsp @CadenaXML,@OK OUTPUT,@OKref OUTPUT                   
               
-			  end
+			      END
+			      
+			      IF @OK IS NULL
+			      BEGIN
+			           	SELECT @CadenaXML=dbo.fnSAMPrefijosXML(@CadenaXML)          
+               
+                       --Se reasigna la variable XML con la cadena de tipo XML              
+                       SELECT @XML=CAST(@CadenaXML AS XML)              
+               
+			           if @debug=1
+				        select @xml  
+			      END
+			      
+			  END TRY
+			  BEGIN CATCH
+			        SELECT @OK=ERROR_NUMBER()
+			              ,@OKRef=ERROR_MESSAGE() 
+			  END CATCH
 
 			   if @Debug=1
 			   insert @debugvalidaxml
                SELECT @NombreDoc, @ok, @okref              
                --Si el documento es correcto entonces se realiza una segunda comprobacion              
               IF @OK IS NULL              
-              BEGIN              
-               --Se re emplaza cfdi: por un campo vacio en las etiquetas donde se tenga              
-               SELECT @CadenaXML=REPLACE(@CadenaXML,'cfdi:','')              
-               --Se re emplza la etiqueta por un caracter vacio en las etiquetas donde se tenga tfd:              
-               SELECT @CadenaXML=REPLACE(@CadenaXML,'tfd:','')              
-               --Se reasigna la variable XML con la cadena de tipo XML              
-               SELECT @XML=CAST(@CadenaXML AS XML)              
-                         
+              BEGIN   
                --Se prepara el XML para su lectura              
                 DECLARE @hdoc int              
                     EXEC sp_xml_preparedocument @hdoc OUTPUT,@XML              
@@ -363,4 +401,4 @@ END
 RETURN              
 END     
     
-    
+    0

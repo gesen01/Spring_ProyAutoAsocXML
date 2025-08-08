@@ -43,13 +43,8 @@ BEGIN
 	        @hdoc       INT
      
           --Se reemplazan los prefijos de la cadena XML para su lectura correcta
-          SELECT @CadenaXML=REPLACE(@XML,'cfdi:','')
-            
-          SELECT @CadenaXML=REPLACE(@CadenaXML,'xmlns:','')
-          SELECT @CadenaXML=REPLACE(@CadenaXML,'xsi:','')
-          SELECT @CadenaXML=REPLACE(@CadenaXML,'tfd:','')
-		  SELECT @CadenaXML=REPLACE(@CadenaXML,'pago10:','')
           
+		  SELECT @CadenaXML=dbo.fnSAMPrefijosXML(@CadenaXML)   
 			--SELECT LEFT(@CadenaXML,3335)
                       
           SELECT @XMLValido=CAST(@CadenaXML AS XML)

@@ -1,0 +1,40 @@
+SET DATEFIRST 7
+SET ANSI_NULLS OFF
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
+SET LOCK_TIMEOUT -1
+SET QUOTED_IDENTIFIER OFF
+GO
+
+IF EXISTS(SELECT * FROM sysobjects WHERE TYPE='fn' AND NAME='fnSAMPrefijosXML')
+DROP FUNCTION fnSAMPrefijosXML
+GO
+CREATE FUNCTION fnSAMPrefijosXML(@CadenaXML	VARCHAR(MAX))
+RETURNS VARCHAR(MAX)
+AS
+BEGIN
+	DECLARE @Contador		INT=1
+		   ,@NumPrefijos	INT
+		   ,@Prefijo		VARCHAR(50)
+		   ,@XML			VARCHAR(MAX)=@CadenaXML
+		   ,@Caracteres		VARCHAR(150)
+		   
+	SELECT @NumPrefijos=COUNT(Valor)
+	FROM TablaSTD
+	WHERE TablaSt='PrefijosXML'
+	
+	WHILE @Contador<=@NumPrefijos
+	BEGIN
+		
+		SELECT @Prefijo=Nombre
+		FROM TablaSTD
+		WHERE CAST(Valor AS INT)=@Contador
+		AND TablaSt='PrefijosXML'
+		ORDER BY CAST(Valor AS INT)
+		
+		SET @XML=REPLACE(@XML,@Prefijo,'')
+		
+		SET @Contador=@Contador+1
+	END
+
+RETURN @XML
+END

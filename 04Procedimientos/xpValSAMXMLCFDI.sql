@@ -625,15 +625,16 @@ END
 /*******************************     C U E N T A     P R E D I A L     ********************************/    
 IF @Ok IS NULL    
 BEGIN    
-DECLARE cCtaPredial CURSOR FOR    
+DECLARE cCtaPredial  CURSOR FOR    
 SELECT [Numero]    
 FROM OPENXML (@iDatos, 'cfdi:Comprobante/cfdi:Conceptos/cfdi:Concepto/cfdi:CuentaPredial',1)    
-WITH ([Numero]  decimal(18,6) '@Numero'    
+WITH ([Numero]  NVARCHAR(25) '@Numero'    
 )    
 OPEN cCtaPredial    
 FETCH NEXT FROM cCtaPredial INTO @CtaPredialNumero    
 WHILE @@FETCH_STATUS = 0 AND @Ok IS NULL    
 BEGIN    
+
 IF ISNUMERIC(@CtaPredialNumero) = 0 AND NULLIF(@CtaPredialNumero,'') IS NOT NULL    
 SELECT @Ok = Mensaje, @OkRef = Descripcion +' Valor: ' + ISNULL(@CtaPredialNumero,'')    
 FROM MensajeLista    
