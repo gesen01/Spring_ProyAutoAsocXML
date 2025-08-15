@@ -3,17 +3,18 @@ DECLARE @xml	VARCHAR(MAX),
 		@Apostofre VARCHAR(1),
 		@RutaDoc   VARCHAR(MAX),
 		@encode		VARCHAR(50),
+		@docXML		XML,
 		@ok		INT,
 		@okref	VARCHAR(255)
 
 DECLARE @value  AS VARCHAR(MAX) = '%[^a-z A-Z 0-9 </>=:?",.]%'
 
---SET @encode='<?xml version="1.0" encoding="utf-8"?>'
+SET @encode='<?xml version="1.0" encoding="utf-8"?>'
 CREATE TABLE #XMLData(
         DocXML  XML
     )	
     
-SELECT @RutaDoc='D:\DesarrolloPST\SpringAir\Scripts\ProyCargaXMLAsocAut\DocsXML\111008052416.xml'
+SELECT @RutaDoc='D:\DesarrolloPST\SpringAir\Scripts\ProyCargaXMLAsocAut\DocsXML\F34488.xml'
 	  ,@Apostofre=CHAR(39)
 	  
 SET @CadenaSQL='INSERT INTO #XMLData
@@ -28,7 +29,15 @@ BEGIN TRY
 	SELECT @xml=CAST(x.DocXML AS VARCHAR(MAX)) 
 	FROM #XMLData AS x
 	
-	SELECT LEFT(@xml,5188)
+	--SELECT LEFT(@xml,2280)
+	
+	SELECT @xml=dbo.fneDocQuitarAcentos(@xml)
+	
+	SELECT @docXML=@encode+@xml
+	
+	SELECT LEFT(CAST(@docXML AS VARCHAR(MAX)),2280)
+	
+	SELECT @docXML	
 	
 	--EXEC xpSAMValidaCFDEsp @xml,@ok OUTPUT,@okref OUTPUT
 	--SELECT @ok,@okref	

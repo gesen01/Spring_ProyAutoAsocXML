@@ -55,8 +55,9 @@ DECLARE @DocsXML TABLE (
 )              
               
 DECLARE @ArchivosXML    TABLE (              
-        ID              INT,              
-        ArchivoXML      VARCHAR(255)              
+        ID              INT         not null,              
+        ArchivoXML      VARCHAR(255)    NUll,
+        eDocName        VaRCHAr(255)    NUll
 ) 
 
               
@@ -114,34 +115,45 @@ BEGIN
                   
     --Se arma la cadena para la lectura de la carpeta               
     SELECT @cmd='DIR '+@Ruta+' /B'      
+
+    if @debug=1
+     select @cmd as 'Comando: lectura de carpeta'
                   
-    if @Debug=1
-       select @ruta as 'Ruta',@RutaValido as 'RutaValido',@RutaInvalido as 'RutaInvalido'
-            ,@cmd as 'ComandoDOS'
-            
     --Se lee la carpeta y se insertan los documentos que se tienen              
     INSERT INTO @DocsXML(DocXML)              
 	EXEC MASTER..xp_cmdshell @cmd   
     
-    If @Debug=1
-        select *
-        from @DocsXML
+    if @Debug=1
+        select *,UPPER(SUBSTRING(DocXML,CHARINDEX('.',DocXML,1)+1,3)) from @DocsXML 
+
                    
     --Se insertan los documentos XML enumerados para su procesamiento              
-    INSERT INTO @ArchivosXML              
-    SELECT ROW_NUMBER() OVER (ORDER BY dx.DocXML), dx.DocXML              
+    INSERT INTO @ArchivosXML          
+    SELECT ROW_NUMBER() OVER (ORDER BY dx.DocXML), dx.DocXML,UPPER(SUBSTRING(dx.DocXML,CHARINDEX('.',dx.DocXML,1)+1,3))              
     FROM @DocsXML AS dx               
     WHERE dx.DocXML IS NOT NULL              
-    AND UPPER(SUBSTRING(dx.DocXML,CHARINDEX('.',dx.DocXML,1)+1,3))='XML'              
+    AND UPPER(SUBSTRING(dx.DocXML,CHARINDEX('.',dx.DocXML,1)+1,3))='XML'
+    
+    if not exists(SElect 1 FROM @ArchivosXML)
+    begin
+         with docsXml
+        As(
+            select distinct ReversE(right(REVERSE(DocXML),Len(DocXML)-4))+'.xml' AS 'nombreinvertido',
+                    ReversE(right(REVERSE(DocXML),Len(DocXML)-4)) As 'edocname'
+            from @DocsXML
+            where DocXML is not null
+        )
+        INSERT INTO @ArchivosXML
+        SELeCT ROW_NUMBER() OVER (ORDER BY nombreinvertido),nombreinvertido,edocname
+        FRoM docsXml
+    end
+
+    if @Debug=1
+        select * from @ArchivosXML
                
     --Se contabiliza cuantos documentos xml se tienen a procesar              
     SELECT @NumDocsxML=COUNT(dx.ID)              
-    FROM @ArchivosXML AS dx    
-    
-    if @Debug=1
-        select @NumDocsxML as 'NumDocsXml'
-               ,@Proveedor as 'proveedor'
-               ,@RFC as 'rfc'
+    FROM @ArchivosXML AS dx              
                      
     --Se asigna el contador para el ciclo que analizara y validara los XML en 1                 
     SET @ContXML=1         
@@ -157,9 +169,9 @@ BEGIN
         BEGIN              
                           
             --Se obtienen las rutas de donde se encuetran los documentos XML y PDF asi como el nombre de los docs XML              
-            SELECT @RutaDocXML=@Ruta+'\'+dx.ArchivoXML              
-                   ,@RutaDocPDF=@Ruta+'\'+SUBSTRING(dx.ArchivoXML,1,CHARINDEX('.',dx.ArchivoXML,1))+'PDF'              
-                   ,@NombreDoc=dx.ArchivoXML              
+            SELECT @RutaDocXML=@Ruta+'\'+dx.eDocName+'.xml'              
+                   ,@RutaDocPDF=@Ruta+'\'+dx.eDocName+'.PDF'              
+                   ,@NombreDoc=dx.eDocName              
             FROM @ArchivosXML AS dx              
             WHERE dx.ID=@ContXML              
 
@@ -178,7 +190,10 @@ BEGIN
               BEGIN TRY
                   --Se asigna la variable con el texto del XML               
                   SELECT @CadenaXML=CAST(DocXML AS VARCHAR(MAX))            
-                  FROM #XMLData      
+                  FROM #XMLData     
+                  
+                  --Se eliminan caracteres invalidos tales como acentos
+                  SELECT @CadenaXML=dbo.fneDocQuitarAcentos(@CadenaXML)
 			  
                   --Se ejecuta la validacion del XML a fin de comprobar que el documento esta correcto               
                   EXEC xpValSAMXMLCFDI @Empresa,@CadenaXML,@OK OUTPUT,@OKref OUTPUT  
@@ -195,22 +210,10 @@ BEGIN
 				     EXEC xpSAMValidaCFDEsp @CadenaXML,@OK OUTPUT,@OKref OUTPUT                   
               
 			      END
-			      
-			      IF @OK IS NULL
-			      BEGIN
-			           	SELECT @CadenaXML=dbo.fnSAMPrefijosXML(@CadenaXML)          
-               
-                       --Se reasigna la variable XML con la cadena de tipo XML              
-                       SELECT @XML=CAST(@CadenaXML AS XML)              
-               
-			           if @debug=1
-				        select @xml  
-			      END
-			      
 			  END TRY
 			  BEGIN CATCH
 			        SELECT @OK=ERROR_NUMBER()
-			              ,@OKRef=ERROR_MESSAGE() 
+			               ,@OKRef=ERROR_MESSAGE() 
 			  END CATCH
 
 			   if @Debug=1
@@ -219,6 +222,18 @@ BEGIN
                --Si el documento es correcto entonces se realiza una segunda comprobacion              
               IF @OK IS NULL              
               BEGIN   
+              	
+              	SELECT @CadenaXML=dbo.fnSAMPrefijosXML(@CadenaXML)  
+				
+				if @Debug=1
+					select @CadenaXML
+               
+               --Se reasigna la variable XML con la cadena de tipo XML              
+               SELECT @XML=CAST(@CadenaXML AS XML)              
+               
+			   if @debug=1
+				select @xml
+
                --Se prepara el XML para su lectura              
                 DECLARE @hdoc int              
                     EXEC sp_xml_preparedocument @hdoc OUTPUT,@XML              
@@ -252,16 +267,20 @@ BEGIN
                    IF EXISTS(SELECT 1 FROM SatXml AS sx WHERE sx.FolioFiscal=@UUID)              
                    BEGIN              
                                
-                        SET @RutaProcXML=@RutaValido+'\'+@NombreDoc              
-                        SET @RutaProcPDF=@RutaValido+'\'+SUBSTRING(@NombreDoc,1,CHARINDEX('.',@NombreDoc,1))+'PDF'              
+                        SET @RutaProcXML=@RutaValido+'\'+@NombreDoc+'.xml'              
+                        SET @RutaProcPDF=@RutaValido+'\'+@NombreDoc+'.PDF'              
           
                     --Se insertan datos en la tabla a utilizar oara la asocioacion de movimientos              
                     INSERT INTO AsociadoXMLSAM(Nombre,Folio,Importe,RFC,Tipo,UUID,FechaTimbrado,FechaRegistro,Asociado)              
-                                    SELECT @NombreDoc,@Folio,@Total,@RFCProv,@TipoComprobante,@UUID,@Fecha,CAST(GETDATE() AS DATE),0              
+                                    SELECT @NombreDoc+'.xml',@Folio,@Total,@RFCProv,@TipoComprobante,@UUID,@Fecha,CAST(GETDATE() AS DATE),0              
                           
                     --Se copian los documentos PDF y XML a la carpeta de validos              
-                    SET @CMD='COPY '+@RutaDocXML+' '+@RutaProcXML              
-                        EXEC MASTER..xp_cmdshell   @CMD, NO_OUTPUT               
+                        SET @CMD='COPY '+@RutaDocXML+' '+@RutaProcXML              
+                        EXEC MASTER..xp_cmdshell   @CMD, NO_OUTPUT 
+                        
+                        if @debug=1
+                           select @CMD as 'Comando: Copia doc xml'
+
                         SET @CMD='DEL '+@RutaDocXML              
                         EXEC MASTER..xp_cmdshell   @CMD, NO_OUTPUT              
                                       
@@ -272,14 +291,14 @@ BEGIN
                                   
                                   
                     --Se insertan los valores de exitos en la tabla de registro de errores              
-                    IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc)               
+                    IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml')               
                         INSERT INTO AsocXMLSAMLog(Nombre,Proveedor, Estatus, Descripcion, FechaProceso)              
-                                      SELECT @NombreDoc,@Proveedor,'Procesado','Procesado con exito',GETDATE()       
+                                      SELECT @NombreDoc+'.xml',@Proveedor,'Procesado','Procesado con exito',GETDATE()       
                     ELSE      
                         UPDATE AsocXMLSAMLog SET Estatus='Procesado'      
                                                 ,Descripcion='Procesado con exito'      
                                                 ,FechaProceso=GETDATE()      
-                                        WHERE Nombre=@NombreDOc      
+                                        WHERE Nombre=@NombreDOc+'.xml'      
                                                   
                    END              
                    ELSE    
@@ -287,12 +306,12 @@ BEGIN
                    	 --Valida que el tipo de comprobante sea un complemento de pago, carta porte y no exista su UUID en la tabla de SATXML   
                    	    IF @TipoComprobante IN ('T','P','E')
                    	    BEGIN
-                   	    	SET @RutaProcXML=@RutaValido+'\'+@NombreDoc              
-                            SET @RutaProcPDF=@RutaValido+'\'+SUBSTRING(@NombreDoc,1,CHARINDEX('.',@NombreDoc,1))+'PDF'              
+                   	    	SET @RutaProcXML=@RutaValido+'\'+@NombreDoc+'.xml'              
+                            SET @RutaProcPDF=@RutaValido+'\'+@NombreDoc+'.PDF'              
           
                             --Se insertan datos en la tabla a utilizar oara la asocioacion de movimientos              
                             INSERT INTO AsociadoXMLSAM(Nombre,Folio,Importe,RFC,Tipo,UUID,FechaTimbrado,FechaRegistro,Asociado)              
-                                            SELECT @NombreDoc,@Folio,@Total,@RFCProv,@TipoComprobante,@UUID,@Fecha,CAST(GETDATE() AS DATE),0              
+                                            SELECT @NombreDoc+'.xml',@Folio,@Total,@RFCProv,@TipoComprobante,@UUID,@Fecha,CAST(GETDATE() AS DATE),0              
                           
                             --Se copian los documentos PDF y XML a la carpeta de validos              
                             SET @CMD='COPY '+@RutaDocXML+' '+@RutaProcXML              
@@ -307,19 +326,19 @@ BEGIN
                                   
                                   
                             --Se insertan los valores de exitos en la tabla de registro de errores              
-                            IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc)               
+                            IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml')               
                                 INSERT INTO AsocXMLSAMLog(Nombre,Proveedor, Estatus, Descripcion, FechaProceso)              
                                               SELECT @NombreDoc,@Proveedor,'Procesado','Procesado con exito',GETDATE()      
 					         ELSE    
 						          UPDATE AsocXMLSAMLog SET Estatus='Procesado'    
 							         ,Descripcion='Procesado con exito'    
 							         ,FechaProceso=GETDATE()    
-						      WHERE Nombre=@NombreDoc  
+						      WHERE Nombre=@NombreDoc+'.xml'  
                    	    END
                    	    ELSE
                    	    BEGIN
-                   	        SET @RutaProcXML=@RutaInValido+'\'+@NombreDoc              
-                              SET @RutaProcPDF=@RutaInValido+'\'+SUBSTRING(@NombreDoc,1,CHARINDEX('.',@NombreDoc,1))+'PDF'              
+                   	        SET @RutaProcXML=@RutaInValido+'\'+@NombreDoc+'.xml'              
+                              SET @RutaProcPDF=@RutaInValido+'\'+@NombreDoc+'.PDF'              
                                   
                               --Se copian los documentos PDF y XML a la carpeta de invalidos              
                               SET @CMD='COPY '+@RutaDocXML+' '+@RutaProcXML              
@@ -333,14 +352,14 @@ BEGIN
                               EXEC MASTER..xp_cmdshell   @CMD, NO_OUTPUT            
                                   
                           --Se insertan los valores de exitos en la tabla de registro de errores              
-                          IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc)                                        
+                          IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml')                                        
                               INSERT INTO AsocXMLSAMLog(Nombre,Proveedor, Estatus, Descripcion, FechaProceso)              
-                                          SELECT @NombreDoc,@Proveedor,'NoProcesado','No se encuentra disponible en la tabla de SATXML',GETDATE()       
+                                          SELECT @NombreDoc+'.xml',@Proveedor,'NoProcesado','No se encuentra disponible en la tabla de SATXML',GETDATE()       
                           ELSE    
                           UPDATE AsocXMLSAMLog SET Descripcion='No se encuentra disponible en la tabla de SATXML'    
                                    ,Estatus='NoProcesado'    
                                 ,FechaProceso=GETDATE()    
-                             WHERE Nombre=@NombreDoc    
+                             WHERE Nombre=@NombreDoc+'.xml'    
     
                           select @ok=null,    
                              @okref=null  		
@@ -349,8 +368,8 @@ BEGIN
               END              
               ELSE              
               BEGIN              
-                    SET @RutaProcXML=@RutaInValido+'\'+@NombreDoc              
-                    SET @RutaProcPDF=@RutaInValido+'\'+SUBSTRING(@NombreDoc,1,CHARINDEX('.',@NombreDoc,1))+'PDF'              
+                    SET @RutaProcXML=@RutaInValido+'\'+@NombreDoc+'.xml'              
+                    SET @RutaProcPDF=@RutaInValido+'\'+@NombreDoc+'.PDF'              
                                   
                     --Se copian los documentos PDF y XML a la carpeta de invalidos              
                     SET @CMD='COPY '+@RutaDocXML+' '+@RutaProcXML              
@@ -364,13 +383,13 @@ BEGIN
                     EXEC MASTER..xp_cmdshell   @CMD, NO_OUTPUT               
                                   
                 --Se insertan los valores de exitos en la tabla de registro de errores              
-                IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc)               
+                IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml')               
                     INSERT INTO AsocXMLSAMLog(Nombre,Proveedor, Estatus, Descripcion, FechaProceso)              
-                                       SELECT @NombreDoc,@Proveedor,'NoProcesado',CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,''),GETDATE()      
+                                       SELECT @NombreDoc+'.xml',@Proveedor,'NoProcesado',CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,''),GETDATE()      
      ELSE      
                    UPDATE AsocXMLSAMLog SET Descripcion = CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,'')      
                                             ,FechaProceso = GETDATE()      
-                   WHERE Nombre=@NombreDoc      
+                   WHERE Nombre=@NombreDoc+'.xml'       
       
         select @ok=null,    
       @okref=null    
@@ -401,4 +420,4 @@ END
 RETURN              
 END     
     
-    0
+    
