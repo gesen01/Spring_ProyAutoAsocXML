@@ -1,4 +1,5 @@
-﻿SET DATEFIRST 7
+﻿
+SET DATEFIRST 7
 SET ANSI_NULLS OFF
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
 SET LOCK_TIMEOUT -1
@@ -70,11 +71,13 @@ SELECT @Apostofre=CHAR(39)
 INSERT INTO @ProvAcre                    
 SELECT p.Proveedor,p.RFC                    
 FROM Prov AS p             
-WHERE p.RFC IS NOT NULL               
+WHERE p.RFC IS NOT NULL 
+AND p.RFC <>''
 UNION ALL                    
 SELECT c.Cliente,c.RFC                    
 FROM Cte AS c                    
-WHERE c.RFC IS NOT NULL                    
+WHERE c.RFC IS NOT NULL   
+AND c.RFC<>''
           
           
 --Se contabiliza cuantos proveedores se van a procesar                    
@@ -217,7 +220,7 @@ BEGIN
                    WITH (                    
                         Folio               VARCHAR(100),                    
                         Fecha               DATETIME,                    
-               TipoDeComprobante   VARCHAR(100),                    
+                        TipoDeComprobante   VARCHAR(100),                    
                         Total               FLOAT                    
                    )                    
                                    
@@ -252,8 +255,8 @@ BEGIN
                                         
                     --Se insertan los valores de exitos en la tabla de registro de errores                    
                     IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDocXML)                     
-                        INSERT INTO AsocXMLSAMLog(Nombre,Proveedor, Estatus, Descripcion, FechaProceso)                    
-                                      SELECT @NombreDocXML,@Proveedor,'Procesado','Procesado con exito',GETDATE()            
+                        INSERT INTO AsocXMLSAMLog(Nombre,Proveedor, FechaExpedicion,Estatus, Descripcion, FechaProceso)                    
+                                      SELECT @NombreDocXML,@Proveedor,@Fecha,'Procesado','Procesado con exito',GETDATE()            
                     ELSE          
                        UPDATE AsocXMLSAMLog SET Estatus='Procesado'          
                                            ,Descripcion='Procesado con exito'          
@@ -287,8 +290,8 @@ BEGIN
                                       
                             --Se insertan los valores de exitos en la tabla de registro de errores                  
                             IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDocXML)                   
-                                INSERT INTO AsocXMLSAMLog(Nombre,Proveedor, Estatus, Descripcion, FechaProceso)                  
-                                              SELECT @NombreDocXML,@Proveedor,'Procesado','Procesado con exito',GETDATE()          
+                                INSERT INTO AsocXMLSAMLog(Nombre,Proveedor, FechaExpedicion,Estatus, Descripcion, FechaProceso)                  
+                                              SELECT @NombreDocXML,@Proveedor,@Fecha,'Procesado','Procesado con exito',GETDATE()          
                           ELSE        
                             UPDATE AsocXMLSAMLog SET Estatus='Procesado'        
                                                     ,Descripcion='Procesado con exito'        
@@ -313,8 +316,8 @@ BEGIN
                                         
                       --Se insertan los valores de exitos en la tabla de registro de errores                    
                       IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDocXML)                                              
-                          INSERT INTO AsocXMLSAMLog(Nombre,Proveedor, Estatus, Descripcion, FechaProceso)                    
-                           SELECT @NombreDocXML,@Proveedor,'NoProcesado','No se encuentra disponible en la tabla de SATXML',GETDATE()         
+                          INSERT INTO AsocXMLSAMLog(Nombre,Proveedor,FechaExpedicion, Estatus, Descripcion, FechaProceso)                    
+                           SELECT @NombreDocXML,@Proveedor,@Fecha,'NoProcesado','No se encuentra disponible en la tabla de SATXML',GETDATE()         
                             ELSE        
                              UPDATE AsocXMLSAMLog SET Descripcion='No se encuentra disponible en la tabla de SATXML'        
                              ,Estatus='NoProcesado'        
@@ -344,8 +347,8 @@ BEGIN
                                         
                 --Se insertan los valores de exitos en la tabla de registro de errores                    
                 IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDocXML)                     
-                    INSERT INTO AsocXMLSAMLog(Nombre,Proveedor, Estatus, Descripcion, FechaProceso)                    
-                                       SELECT @NombreDocXML,@Proveedor,'NoProcesado',CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,''),GETDATE()            
+                    INSERT INTO AsocXMLSAMLog(Nombre,Proveedor,FechaExpedicion, Estatus, Descripcion, FechaProceso)                    
+                                       SELECT @NombreDocXML,@Proveedor,@Fecha,'NoProcesado',CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,''),GETDATE()            
                 ELSE            
                    UPDATE AsocXMLSAMLog SET Descripcion = CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,'')            
                                             ,FechaProceso = GETDATE()            
