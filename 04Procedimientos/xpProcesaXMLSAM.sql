@@ -73,11 +73,13 @@ SELECT p.Proveedor,p.RFC
 FROM Prov AS p             
 WHERE p.RFC IS NOT NULL 
 AND p.RFC <>''
+AND p.Estatus='ALTA'
 UNION ALL                    
 SELECT c.Cliente,c.RFC                    
 FROM Cte AS c                    
 WHERE c.RFC IS NOT NULL   
 AND c.RFC<>''
+AND c.Estatus='ALTA'
           
           
 --Se contabiliza cuantos proveedores se van a procesar                    
@@ -112,7 +114,7 @@ BEGIN
                         
     --Se insertan los documentos XML enumerados para su procesamiento                    
     INSERT INTO @ArchivosXML                    
-    SELECT ROW_NUMBER() OVER (ORDER BY dx.DocXML), UPPER(SUBSTRING(dx.DocXML,CHARINDEX('.',dx.DocXML,1)+1,3))                    
+    SELECT ROW_NUMBER() OVER (ORDER BY dx.DocXML), UPPER(SUBSTRING(dx.DocXML,1,CHARINDEX('.',dx.DocXML,1)-1))                    
     FROM @DocsXML AS dx                     
     WHERE dx.DocXML IS NOT NULL                    
     AND UPPER(SUBSTRING(dx.DocXML,CHARINDEX('.',dx.DocXML,1)+1,3))='XML'    
