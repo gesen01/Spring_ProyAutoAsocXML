@@ -41,7 +41,11 @@ BEGIN
     @NombreDoc   VARCHAR(255),              
     @RFCProv   VARCHAR(20),              
     @OK     INT,              
-    @OKref    VARCHAR(255)              
+    @OKref    VARCHAR(255),
+    @hdoc     INT,
+    @ClaveCancelacion   VARCHAR(10),
+    @XMLCancelado   VARCHAR(MAX)
+               
                   
 DECLARE @ProvAcre    TABLE (              
     ID    INT IDENTITY(1,1) NOT NULL,              
@@ -54,11 +58,10 @@ DECLARE @DocsXML TABLE (
         DocXML  VARCHAR(255)               
 )              
               
-DECLARE @ArchivosXML    TABLE (              
-        ID              INT         not null,              
-        ArchivoXML      VARCHAR(255)    NUll,
-        eDocName        VaRCHAr(255)    NUll
-) 
+DECLARE @ArchivosXML    TABLE (                    
+        ID              INT,                    
+        eDocName      VARCHAR(255)                    
+)  
 
               
 CREATE TABLE #XMLData(              
@@ -129,10 +132,10 @@ BEGIN
                    
     --Se insertan los documentos XML enumerados para su procesamiento              
     INSERT INTO @ArchivosXML          
-    SELECT ROW_NUMBER() OVER (ORDER BY dx.DocXML), dx.DocXML,UPPER(SUBSTRING(dx.DocXML,CHARINDEX('.',dx.DocXML,1)+1,3))              
-    FROM @DocsXML AS dx               
-    WHERE dx.DocXML IS NOT NULL              
-    AND UPPER(SUBSTRING(dx.DocXML,CHARINDEX('.',dx.DocXML,1)+1,3))='XML'
+    SELECT ROW_NUMBER() OVER (ORDER BY dx.DocXML), UPPER(SUBSTRING(dx.DocXML,1,CHARINDEX('.',dx.DocXML,1)-1))                    
+    FROM @DocsXML AS dx                     
+    WHERE dx.DocXML IS NOT NULL                    
+    AND UPPER(SUBSTRING(dx.DocXML,CHARINDEX('.',dx.DocXML,1)+1,3))='XML'  
     
     if not exists(SElect 1 FROM @ArchivosXML)
     begin
@@ -144,7 +147,7 @@ BEGIN
             where DocXML is not null
         )
         INSERT INTO @ArchivosXML
-        SELeCT ROW_NUMBER() OVER (ORDER BY nombreinvertido),nombreinvertido,edocname
+        SELeCT ROW_NUMBER() OVER (ORDER BY nombreinvertido),edocname
         FRoM docsXml
     end
 
@@ -188,28 +191,63 @@ BEGIN
               EXEC (@cmdSQL)  
 
               BEGIN TRY
-                  --Se asigna la variable con el texto del XML               
-                  SELECT @CadenaXML=CAST(DocXML AS VARCHAR(MAX))            
-                  FROM #XMLData     
+                    
+                    --Esta seccion utilizara un script que determinara si el xml es de cancelacion, de ser asi devolvera el codigo de cancelacion en la variable
+                   --@OKRef y lo asignara a la variable @clavecancelacion
+                   IF @OK IS NULL
+                   BEGIN
+                   	    SELECT @OK=NULL,
+                   	           @OKRef=NULL
+                   	           
+                   	           SELECT @XMLCancelado=CAST(DocXML AS VARCHAR(MAX))            
+                                FROM #XMLData 
+                   	           
+                   	           EXEC xpXMLCanceladosSAM @XML,@OK OUTPUT,@OKref OUTPUT
+                   	           
+                   	           IF @Debug=1
+                   	            SELECT @OK AS '@OK'
+                   	                  ,@OKRef   AS '@OKRef'
+                   	           
+                   	           IF @OK IS NOT NULL
+                   	            SELECT @ClaveCancelacion=@OKRef 
+                   END
+                    
+                    IF @Debug=1
+                        SELECT @ClaveCancelacion AS '@ClaveCancelacion'
+                               ,@XMLCancelado AS '@XMLCancelado'
+                   
+                  IF @OK IS NULL
+                  BEGIN 
+                  	   SELECT @OK=NULL,
+                  	          @OKRef=NULL
+                  	   
+                       --Se asigna la variable con el texto del XML               
+                      SELECT @CadenaXML=CAST(DocXML AS VARCHAR(MAX))            
+                      FROM #XMLData    
                   
-                  --Se eliminan caracteres invalidos tales como acentos
-                  SELECT @CadenaXML=dbo.fneDocQuitarAcentos(@CadenaXML)
+                      --Se eliminan caracteres invalidos tales como acentos
+                      SELECT @CadenaXML=dbo.fneDocQuitarAcentos(@CadenaXML)
 			  
-                  --Se ejecuta la validacion del XML a fin de comprobar que el documento esta correcto               
-                  EXEC xpValSAMXMLCFDI @Empresa,@CadenaXML,@OK OUTPUT,@OKref OUTPUT  
+                      --Se ejecuta la validacion del XML a fin de comprobar que el documento esta correcto               
+                      EXEC xpValSAMXMLCFDI @Empresa,@CadenaXML,@OK OUTPUT,@OKref OUTPUT  
 			  
-			      IF @Debug=1
-                   SELECT @NombreDoc, @ok, @okref,@Proveedor   
+			          IF @Debug=1
+                       SELECT @NombreDoc, @ok, @okref,@Proveedor   
 
-                  --Se ejecuta el validador de documentos XML que no cumplen los requisitos del primer validador
-                  IF @OK IS NOT NULL
-			      BEGIN
-                     SELECT @ok=null,
-						    @OKref=null
+                      --Se ejecuta el validador de documentos XML que no cumplen los requisitos del primer validador
+                      IF @OK IS NOT NULL
+			          BEGIN
+                         SELECT @ok=null,
+						        @OKref=null
 				 
-				     EXEC xpSAMValidaCFDEsp @CadenaXML,@OK OUTPUT,@OKref OUTPUT                   
+				         EXEC xpSAMValidaCFDEsp @CadenaXML,@OK OUTPUT,@OKref OUTPUT                   
               
-			      END
+			          END
+                  END
+                  ELSE
+                  BEGIN
+                  	SELECT @OK=NULL
+                  END
 			  END TRY
 			  BEGIN CATCH
 			        SELECT @OK=ERROR_NUMBER()
@@ -235,8 +273,7 @@ BEGIN
 				select @xml
 
                --Se prepara el XML para su lectura              
-                DECLARE @hdoc int              
-                    EXEC sp_xml_preparedocument @hdoc OUTPUT,@XML              
+                EXEC sp_xml_preparedocument @hdoc OUTPUT,@XML              
                                     
                --Se obtiene el UUID del documento XML              
                SELECT @UUID=UUID              
@@ -303,8 +340,16 @@ BEGIN
                    END              
                    ELSE    
                    BEGIN
+                   	    
+                   	    IF @Debug=1
+                   	        SELECT @TipoComprobante, @ClaveCancelacion
+                   	    
+                   	    --Valida si el tipo de comprobante es vacio y la clave de validacion no es vacia asigna un tipo de comprobante de tipo 'C' 
+                   	    IF @TipoComprobante IS NULL AND @ClaveCancelacion IS NOT NULL
+                  	       SELECT @TipoComprobante='C'
+                   	    
                    	 --Valida que el tipo de comprobante sea un complemento de pago, carta porte y no exista su UUID en la tabla de SATXML   
-                   	    IF @TipoComprobante IN ('T','P','E')
+                   	    IF @TipoComprobante IN ('T','P','E','C')
                    	    BEGIN
                    	    	SET @RutaProcXML=@RutaValido+'\'+@NombreDoc+'.xml'              
                             SET @RutaProcPDF=@RutaValido+'\'+@NombreDoc+'.PDF'              
@@ -413,7 +458,7 @@ END
      -- Liberamos memoria de la lectura del xml              
      IF @hdoc IS NOT NULL              
 		EXEC sp_xml_removedocument @hdoc      
-
+	
 	if @Debug=1
 		select * from @debugvalidaxml
               

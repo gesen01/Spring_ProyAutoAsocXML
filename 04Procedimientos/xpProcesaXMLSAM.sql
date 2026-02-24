@@ -9,41 +9,42 @@ GO
 IF EXISTS(SELECT * FROM sysobjects WHERE TYPE='p' AND NAME='xpProcesaXMLSAM')
 DROP PROCEDURE xpProcesaXMLSAM
 GO
-
-CREATE PROCEDURE xpProcesaXMLSAM              
+CREATE PROCEDURE [dbo].[xpProcesaXMLSAM]            
    @Empresa  VARCHAR(10)          
 AS                    
 BEGIN                    
  DECLARE                 
- @cmd    VARCHAR(500),                    
-    @Ruta    VARCHAR(255),                    
-    @RutaValido   VARCHAR(255),                    
-    @RutaInvalido  VARCHAR(255),                    
-    @NumProv   INT,                    
-    @ContProv   INT=1,                    
-    @NumDocsxML   INT,                    
-    @ContXML   INT,                    
-    @RFC    VARCHAR(15),                    
-    @Proveedor   VARCHAR(10),                    
-    @DocXML    VARCHAR(150),                    
-    @cmdSQL    VARCHAR(MAX),                    
-    @Apostofre   VARCHAR(1),                    
-    @RutaDocXML   VARCHAR(1500),                    
-    @RutaDocPDF   VARCHAR(1500),                    
-    @RutaProcXML  VARCHAR(1500),                    
-    @RutaProcPDF  VARCHAR(1500),                    
-    @CadenaXML   VARCHAR(MAX),                    
-    @XML    XML,                    
-    @Folio    VARCHAR(15),                    
-    @UUID    VARCHAR(50),                    
-    @Fecha    DATETIME,                    
+    @cmd                VARCHAR(500),                    
+    @Ruta               VARCHAR(255),                    
+    @RutaValido         VARCHAR(255),                    
+    @RutaInvalido       VARCHAR(255),                    
+    @NumProv            INT,                    
+    @ContProv           INT=1,                    
+    @NumDocsxML         INT,                    
+    @ContXML            INT,                    
+    @RFC                VARCHAR(15),                    
+    @Proveedor          VARCHAR(10),                    
+    @DocXML             VARCHAR(150),                    
+    @cmdSQL             VARCHAR(MAX),                    
+    @Apostofre          VARCHAR(1),                    
+    @RutaDocXML         VARCHAR(1500),                    
+    @RutaDocPDF         VARCHAR(1500),                    
+    @RutaProcXML        VARCHAR(1500),                    
+    @RutaProcPDF        VARCHAR(1500),                    
+    @CadenaXML          VARCHAR(MAX),                    
+    @XML                XML,                    
+    @Folio              VARCHAR(15),                    
+    @UUID               VARCHAR(50),                    
+    @Fecha              DATETIME,                    
     @TipoComprobante    VARCHAR(10),                    
-    @Total    FLOAT,                    
-    @NombreDocXML   VARCHAR(255),   
-    @NombreDocPDF   VARCHAR(255),                 
-    @RFCProv   VARCHAR(20),                    
-    @OK     INT,                    
-    @OKref    VARCHAR(255)                    
+    @Total              FLOAT,                    
+    @NombreDocXML       VARCHAR(255),   
+    @NombreDocPDF       VARCHAR(255),                 
+    @RFCProv            VARCHAR(20),                    
+    @OK                 INT,                    
+    @OKref              VARCHAR(255),
+    @ClaveCancelacion   VARCHAR(10),
+    @XMLCancelado       VARCHAR(MAX)                    
                         
 DECLARE @ProvAcre    TABLE (                    
     ID    INT IDENTITY(1,1) NOT NULL,                    
@@ -72,14 +73,13 @@ INSERT INTO @ProvAcre
 SELECT p.Proveedor,p.RFC                    
 FROM Prov AS p             
 WHERE p.RFC IS NOT NULL 
-AND p.RFC <>''
-AND p.Estatus='ALTA'
+AND p.RFC <>'' and p.Pais <>'España'
 UNION ALL                    
 SELECT c.Cliente,c.RFC                    
 FROM Cte AS c                    
 WHERE c.RFC IS NOT NULL   
 AND c.RFC<>''
-AND c.Estatus='ALTA'
+                             
           
           
 --Se contabiliza cuantos proveedores se van a procesar                    
@@ -165,33 +165,60 @@ BEGIN
               EXEC (@cmdSQL)                      
                                          
               BEGIN TRY
-                  --Se asigna la variable con el texto del XML               
-                  SELECT @CadenaXML=CAST(DocXML AS VARCHAR(MAX))            
-                  FROM #XMLData      
+                
+                  --Esta seccion utilizara un script que determinara si el xml es de cancelacion, de ser asi devolvera el codigo de cancelacion en la variable
+                   --@OKRef y lo asignara a la variable @clavecancelacion
+                   IF @OK IS NULL
+                   BEGIN
+                   	    SELECT @OK=NULL,
+                   	           @OKRef=NULL
+                   	           
+                   	           SELECT @XMLCancelado=CAST(DocXML AS VARCHAR(MAX))            
+                                FROM #XMLData 
+                   	           
+                   	           EXEC xpXMLCanceladosSAM @XMLCancelado,@OK OUTPUT,@OKref OUTPUT
+                  	           
+                   	           IF @OK IS NOT NULL
+                   	            SELECT @ClaveCancelacion=@OKRef 
+                   END  
                   
-                  --Se eliminan caracteres invalidos tales como acentos
-                  SELECT @CadenaXML=dbo.fneDocQuitarAcentos(@CadenaXML)
+                  IF @OK IS NULL
+                  BEGIN 
+                  	   SELECT @OK=NULL,
+                  	          @OKRef=NULL
+                            
+                      --Se asigna la variable con el texto del XML               
+                      SELECT @CadenaXML=CAST(DocXML AS VARCHAR(MAX))            
+                      FROM #XMLData      
+             
+                      --Se eliminan caracteres invalidos tales como acentos
+                      SELECT @CadenaXML=dbo.fneDocQuitarAcentos(@CadenaXML)
 			  
-                  --Se ejecuta la validacion del XML a fin de comprobar que el documento esta correcto               
-                  EXEC xpValSAMXMLCFDI @Empresa,@CadenaXML,@OK OUTPUT,@OKref OUTPUT  
+                      --Se ejecuta la validacion del XML a fin de comprobar que el documento esta correcto               
+                      EXEC xpValSAMXMLCFDI @Empresa,@CadenaXML,@OK OUTPUT,@OKref OUTPUT  
 
-                  --Se ejecuta el validador de documentos XML que no cumplen los requisitos del primer validador
-                  IF @OK IS NOT NULL
-			      BEGIN
-                     SELECT @ok=null,
-						    @OKref=null
+                      --Se ejecuta el validador de documentos XML que no cumplen los requisitos del primer validador
+                      IF @OK IS NOT NULL
+			          BEGIN
+                         SELECT @ok=null,
+						        @OKref=null
 				 
-				     EXEC xpSAMValidaCFDEsp @CadenaXML,@OK OUTPUT,@OKref OUTPUT                   
+				         EXEC xpSAMValidaCFDEsp @CadenaXML,@OK OUTPUT,@OKref OUTPUT                   
               
-			      END
+			          END
 			      
-			      IF @OK IS NULL
-			      BEGIN
-			           --Se reemplazan los prefijos del documento XML para que este sea leido y estructurado correctamente                    
-                       SELECT @CadenaXML=dbo.fnSAMPrefijosXML(@CadenaXML)                    
-                       --Se reasigna la variable XML con la cadena de tipo XML                    
-                       SELECT @XML=CAST(@CadenaXML AS XML)    
+			          IF @OK IS NULL
+			          BEGIN
+			               --Se reemplazan los prefijos del documento XML para que este sea leido y estructurado correctamente                    
+                           SELECT @CadenaXML=dbo.fnSAMPrefijosXML(@CadenaXML)                    
+                           --Se reasigna la variable XML con la cadena de tipo XML                    
+                           SELECT @XML=CAST(@CadenaXML AS XML)    
+			          END
 			      END
+                  ELSE
+                  BEGIN
+                  	SELECT @OK=NULL
+                  END
 			  END TRY
 			  BEGIN CATCH
 			        SELECT @OK=ERROR_NUMBER()
@@ -267,9 +294,14 @@ BEGIN
                                          
                    END                    
                    ELSE    
-                   BEGIN     
+                   BEGIN
+                   	    
+                   	    --Valida si el tipo de comprobante es vacio y la clave de validacion no es vacia asigna un tipo de comprobante de tipo 'C' 
+                   	    IF @TipoComprobante IS NULL AND @ClaveCancelacion IS NOT NULL
+                  	       SELECT @TipoComprobante='C'
+                   	     
                      --Valida que el tipo de comprobante sea un complemento de pago, carta porte y no exista su UUID en la tabla de SATXML       
-                        IF @TipoComprobante IN ('T','P','E')    
+                        IF @TipoComprobante IN ('T','P','E','C')   
                         BEGIN    
                          SET @RutaProcXML=@RutaValido+'\'+@NombreDocXML                  
                             SET @RutaProcPDF=@RutaValido+'\'+@NombreDocPDF                  
@@ -377,4 +409,4 @@ END
 EXEC sp_xml_removedocument @hdoc                    
                     
 RETURN                    
-END 
+END  
