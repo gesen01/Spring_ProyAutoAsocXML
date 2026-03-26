@@ -43,11 +43,9 @@ BEGIN
 	        @hdoc       INT
      
           --Se reemplazan los prefijos de la cadena XML para su lectura correcta
-          
-		  SELECT @CadenaXML=dbo.fnSAMPrefijosXML(@CadenaXML)   
-			--SELECT LEFT(@CadenaXML,3335)
-                      
-          SELECT @XMLValido=CAST(@CadenaXML AS XML)
+         -- SELECT @CadenaXML=dbo.fnSAMPrefijosXML(@XML)   
+		                        
+          SELECT @XMLValido=CAST(@XML AS XML)
           
           EXEC sp_xml_preparedocument @hdoc OUTPUT,@XMLValido
           
@@ -70,7 +68,6 @@ BEGIN
 				[LugarExpedicion]		   VARCHAR(5),
 				[Serie]			VARCHAR(5)
             )
-
 
 			--SE VALIDA CABECERA--
             IF ISNULL(@Version,'')='' OR @Version NOT IN ('3.2','3.3','4.0')
@@ -257,5 +254,3 @@ BEGIN
 			
 RETURN
 END
-          
-          --DROP TABLE #XMLData
