@@ -9,7 +9,7 @@ GO
 IF EXISTS(SELECT * FROM sysobjects WHERE TYPE='p' AND NAME='xpProcesaXMLSAM')
 DROP PROCEDURE xpProcesaXMLSAM
 GO
-CREATE PROCEDURE [dbo].[xpProcesaXMLSAM]            
+CREATE PROCEDURE [dbo].[xpProcesaXMLSAM]
    @Empresa  VARCHAR(10)          
 AS                    
 BEGIN                    
@@ -17,7 +17,8 @@ BEGIN
     @cmd                VARCHAR(500),                    
     @Ruta               VARCHAR(255),                    
     @RutaValido         VARCHAR(255),                    
-    @RutaInvalido       VARCHAR(255),                    
+    @RutaInvalido       VARCHAR(255),                
+    @RutaRepositorio    VARCHAR(255),                    
     @NumProv            INT,                    
     @ContProv           INT=1,                    
     @NumDocsxML         INT,                    
@@ -46,11 +47,20 @@ BEGIN
     @ClaveCancelacion   VARCHAR(10),
     @XMLCancelado       VARCHAR(MAX)                    
                         
-DECLARE @ProvAcre    TABLE (                    
-    ID    INT IDENTITY(1,1) NOT NULL,                    
+DECLARE @ProvAcre    TABLE (
     Proveedor  VARCHAR(10),                    
     RFC    VARCHAR(15)                    
-)                    
+)    
+
+DECLARE @RepositorioRFC   TABLE (              
+    RFC    VARCHAR(15)                    
+)
+
+DECLARE @ProveedoresRFC TABLE(
+    ID              INT IDENTITY(1,1) NOT NULL,
+    Proveedor       VARCHAR(15),
+    RFC             VARCHAR(15)
+)                     
                     
 --Se crea tabla para almacenar nombre de los documentos xml                    
 DECLARE @DocsXML TABLE (                    
@@ -66,33 +76,55 @@ CREATE TABLE #XMLData(
         DocXML  XML                    
 )                    
                     
-SELECT @Apostofre=CHAR(39)                    
+SELECT @Apostofre=CHAR(39)  
+
+--Se obtiene la ruta del repositorio general
+SELECT @RutaRepositorio=RutaRepositorio
+FROM ConfigAsociacionXMLSAM                    
+WHERE Empresa=@Empresa  
+
+--Se arma la cadena para la lectura de la carpeta                     
+SELECT @cmd='DIR '+@RutaRepositorio+' /B'                    
+                        
+--Se lee la carpeta y se insertan el nombre de las carpetas (RFC) del repositorio                    
+    INSERT INTO @RepositorioRFC(RFC)                    
+    EXEC MASTER..xp_cmdshell @cmd  
                     
 --Se insertan los RFC y proveedores a procesar               
-INSERT INTO @ProvAcre                    
-SELECT p.Proveedor,p.RFC                    
-FROM Prov AS p             
-WHERE p.RFC IS NOT NULL 
-AND p.RFC <>'' and p.Pais <>'España'
-UNION ALL                    
-SELECT c.Cliente,c.RFC                    
-FROM Cte AS c                    
-WHERE c.RFC IS NOT NULL   
-AND c.RFC<>''
-                             
-          
-          
---Se contabiliza cuantos proveedores se van a procesar                    
+INSERT INTO @ProvAcre              
+    SELECT p.Proveedor,p.RFC              
+    FROM Prov AS p       
+    WHERE p.RFC IS NOT NULL  
+    AND EXISTS(SELECT 1 FROM @RepositorioRFC r WHERE r.RFC=p.RFC)
+    UNION ALL              
+    SELECT c.Cliente,c.RFC              
+    FROM Cte AS c              
+    WHERE c.RFC IS NOT NULL   
+    AND EXISTS(SELECT 1 FROM @RepositorioRFC r WHERE r.RFC=c.RFC)
+
+INSERT INTO @ProveedoresRFC
+    SELECT p.Proveedor 
+          ,p.RFC
+    FROM @ProvAcre p
+    UNION 
+    SELECT 'SINASIGNAR'
+          ,r.RFC
+    FROM @RepositorioRFC r
+    WHERE NOT EXISTS(SELECT 1 FROM @ProvAcre p WHERE p.RFC=r.RFC) 
+    AND r.RFC IS NOT NULL
+
+  
+--Se contabiliza cuantos proveedores se van a procesar              
 SELECT @NumProv=COUNT(p.Proveedor)                    
-FROM @ProvAcre AS p                    
+FROM @ProveedoresRFC AS p                     
                     
 --Se genera un ciclo que permitira procesar cada proveedor                    
 WHILE @ContProv <= @NumProv                    
 BEGIN                    
- SELECT @Proveedor=Proveedor                    
-  ,@RFC=p.RFC                    
- FROM @ProvAcre AS p                    
- WHERE p.ID=@ContProv                    
+ SELECT @Proveedor=Proveedor              
+        ,@RFC=p.RFC              
+FROM @ProveedoresRFC AS p              
+WHERE p.ID=@ContProv                    
                     
     --Se obtinene las ruta de las carpetas  a donde se procesaran los documentos XML                     
     SELECT @Ruta=REPLACE(RutaRepositorioProc,'<rfc>',@RFC)                    
@@ -110,8 +142,10 @@ BEGIN
                         
     --Se lee la carpeta y se insertan los documentos que se tienen                    
     INSERT INTO @DocsXML(DocXML)                    
-    EXEC MASTER..xp_cmdshell @cmd                    
-                        
+    EXEC MASTER..xp_cmdshell @cmd   
+    
+    IF EXISTS(SELECT 1 FROM @DocsXML)                 
+    BEGIN                   
     --Se insertan los documentos XML enumerados para su procesamiento                    
     INSERT INTO @ArchivosXML                    
     SELECT ROW_NUMBER() OVER (ORDER BY dx.DocXML), UPPER(SUBSTRING(dx.DocXML,1,CHARINDEX('.',dx.DocXML,1)-1))                    
@@ -156,8 +190,9 @@ BEGIN
             SELECT @RutaDocXML=@Ruta+'\'+@NombreDocXML                    
                    ,@RutaDocPDF=@Ruta+'\'+@NombreDocPDF                                     
             FROM @ArchivosXML AS dx                    
-            WHERE dx.ID=@ContXML                    
-                                
+            WHERE dx.ID=@ContXML   
+            
+                                           
             --Se realiza la insercion de los datos en la tablan #XMLData de tipo XML                    
             SET @cmdSQL='INSERT INTO #XMLData                    
                                 SELECT P                    
@@ -168,6 +203,7 @@ BEGIN
                 
                   --Esta seccion utilizara un script que determinara si el xml es de cancelacion, de ser asi devolvera el codigo de cancelacion en la variable
                    --@OKRef y lo asignara a la variable @clavecancelacion
+       
                    IF @OK IS NULL
                    BEGIN
                    	    SELECT @OK=NULL,
@@ -175,12 +211,14 @@ BEGIN
                    	           
                    	           SELECT @XMLCancelado=CAST(DocXML AS VARCHAR(MAX))            
                                 FROM #XMLData 
-                   	           
-                   	           EXEC xpXMLCanceladosSAM @XMLCancelado,@OK OUTPUT,@OKref OUTPUT
+                                                                                                 	           
+                   	           EXEC xpXMLCanceladosSAM @XMLCancelado,@OK OUTPUT,@OKref OUTPUT                            
                   	           
                    	           IF @OK IS NOT NULL
                    	            SELECT @ClaveCancelacion=@OKRef 
                    END  
+
+                   
                   
                   IF @OK IS NULL
                   BEGIN 
@@ -246,7 +284,7 @@ BEGIN
                          ,@Total=Total                    
                          ,@Folio=Folio                    
                    FROM OPENXML (@hdoc, '/Comprobante',1)                    
-                   WITH (                    
+             WITH (                    
                         Folio               VARCHAR(100),                    
                         Fecha               DATETIME,                    
                         TipoDeComprobante   VARCHAR(100),                    
@@ -298,7 +336,7 @@ BEGIN
                    	    
                    	    --Valida si el tipo de comprobante es vacio y la clave de validacion no es vacia asigna un tipo de comprobante de tipo 'C' 
                    	    IF @TipoComprobante IS NULL AND @ClaveCancelacion IS NOT NULL
-                  	       SELECT @TipoComprobante='C'
+	       SELECT @TipoComprobante='C'
                    	     
                      --Valida que el tipo de comprobante sea un complemento de pago, carta porte y no exista su UUID en la tabla de SATXML       
                         IF @TipoComprobante IN ('T','P','E','C')   
@@ -396,7 +434,8 @@ BEGIN
                               
             SET @ContXML=@ContXML+1                    
         END                     
-    END                    
+    END  
+    END                  
                         
  DELETE FROM @DocsXML                    
  DELETE FROM @ArchivosXML                    
@@ -409,4 +448,4 @@ END
 EXEC sp_xml_removedocument @hdoc                    
                     
 RETURN                    
-END  
+END 

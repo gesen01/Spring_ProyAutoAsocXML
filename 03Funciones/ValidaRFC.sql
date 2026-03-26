@@ -20,7 +20,7 @@ BEGIN
     IF EXISTS(  SELECT *
                 FROM(VALUES(10, '[A-Z][A-Z][A-Z][A-Z][0-9][0-9][0-9][0-9][0-9][0-9]', 5), --Persona física sin homoclave
                            (13, '[A-Z][A-Z][A-Z][A-Z][0-9][0-9][0-9][0-9][0-9][0-9][A-Z0-9][A-Z0-9][A-Z0-9]', 5), --Persona física con homoclave
-                           (12, '[A-Z][A-Z][A-Z][0-9][0-9][0-9][0-9][0-9][0-9][A-Z0-9][A-Z0-9][A-Z0-9]', 4) --Persona moral (siempre lleva homoclave)
+                           (12, '[A-Z][&A-Z][A-Z][0-9][0-9][0-9][0-9][0-9][0-9][A-Z0-9][A-Z0-9][A-Z0-9]', 4) --Persona moral (siempre lleva homoclave)
                            )x(longitud, patron, iniciofecha)
                 WHERE longitud = LEN( @RFC) -- Escoge cual patrón usar
                 AND   @RFC LIKE patron -- Valida que el RFC cumpla con el patrón de letras y números

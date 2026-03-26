@@ -1,5 +1,6 @@
 ﻿CREATE TABLE ConfigAsociacionXMLSAM(
     Empresa			   VARCHAR(5)	    NOT NULL,
+    RutaRepositorio		   VARCHAR(150)    NULL,
     RutaRepositorioProc	   VARCHAR(150)    NULL,
     RutaRepositorioVal	   VARCHAR(150)    NULL,
     RutaRepositorioInVal	   VARCHAR(150)    NULL,
@@ -10,3 +11,4 @@
     
     CONSTRAINT pkConfigAsociacionXMLSAM PRIMARY KEY (Empresa)
 )
+

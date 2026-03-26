@@ -2,6 +2,7 @@ CREATE TABLE AsocXMLSAMLog(
      ID                 INT IDENTITY(1,1) NOT NULL,
      Nombre 	        VARCHAR(255),
      Proveedor          VARCHAR(15),
+     RFC                VARCHAR(15),
      FechaExpedicion    DATETIME,
      Estatus            VARCHAR(15),
      Descripcion        VARCHAR(150),
@@ -11,3 +12,4 @@ CREATE TABLE AsocXMLSAMLog(
 )
 
 EXEC spALTER_TABLE 'AsocXMLSAMLog',' FechaExpedicion DATETIME NULL'
+EXEC spALTER_TABLE 'AsocXMLSAMLog','RFC','VARCHAR(15) NULL'
