@@ -31,35 +31,31 @@ BEGIN
 	JOIN TablaStD AS tsd ON tsd.TablaSt = ts.TablaSt
 	WHERE ts.TablaSt='Claves Cancelacion XML'
 	
+
 	SELECT @NumClaves=COUNT(ID)
 	FROM @ClavesCancelacion AS cc
-	
+		
 	IF ISNULL(@NumClaves,0) <> 0
 	BEGIN
-		WHILE @Contador<=@NumClaves
+		WHILE @Contador <= @NumClaves
 		BEGIN
 			SELECT @Clave=cc.clave
 			FROM @ClavesCancelacion AS cc
 			WHERE ID=@Contador
 			
 			SELECT @Etiqueta='<EstatusUUID>'+@Clave+'</EstatusUUID>'
-			
+
 			SELECT @EstatusUUID=CHARINDEX(@Etiqueta,@XML,1)
-			
-			IF @EstatusUUID=0
-			BEGIN
-				BREAK
-			END	
-			ELSE
+
+			IF @EstatusUUID<>0
 			BEGIN
 				SELECT @OK=@EstatusUUID,@OKRef=@Clave
-				BREAK
+				Break
 			END	 
 			
 			SET @Contador=@Contador+1
 		END
 	END 
-	
-	
+		
 RETURN
 END

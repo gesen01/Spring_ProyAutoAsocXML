@@ -13,14 +13,14 @@ CREATE FUNCTION dbo.fnSAMEliminarPrefijosXML (@xml NVARCHAR(MAX))
 RETURNS NVARCHAR(MAX)
 AS
 BEGIN
-    DECLARE @Pos INT = CHARINDEX(':', @xml)
-    
+    DECLARE @Pos            INT = CHARINDEX(':', @xml)    
+
     WHILE @Pos > 0
     BEGIN
         -- Verificamos que el ':' esté dentro de una etiqueta <...>
         -- Buscamos el inicio de la etiqueta '<' o '</' hacia atrás
         DECLARE @Start INT = @Pos
-        WHILE @Start > 1 AND SUBSTRING(@xml, @Start, 1) NOT IN ('<', '/', ' ', '"','|','{','}','[',']',''',')   
+        WHILE @Start > 1 AND SUBSTRING(@xml, @Start, 1) NOT IN ('<','/',' ','xmlns',',','"','|','{','}','[',']',''',','*','(',')')   
             SET @Start = @Start - 1
 
         -- Si encontramos el inicio de un prefijo dentro de un tag, lo removemos
