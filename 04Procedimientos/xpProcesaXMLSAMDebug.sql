@@ -122,7 +122,7 @@ BEGIN
     WHERE c.RFC IS NOT NULL   
     And c.Estatus='Alta'
     AND EXISTS(SELECT 1 FROM @RepositorioRFC r WHERE r.RFC=c.RFC)  
-END        
+END      
     INSERT INTO @ProvAcre                
     SELECT p.Proveedor,p.RFC                
     FROM Prov AS p  
@@ -281,7 +281,8 @@ WHERE p.ID=@ContProv
                    IF @OK IS NULL  
                    BEGIN  
                         SELECT @OK=NULL,  
-                               @OKRef=NULL  
+                               @OKRef=NULL,
+                               @ClaveCancelacion=null
                                  
                                SELECT @XMLCancelado=CAST(DocXML AS VARCHAR(MAX))              
                                 FROM #XMLData   
@@ -317,14 +318,14 @@ WHERE p.ID=@ContProv
                       --Se ejecuta la validacion del XML a fin de comprobar que el documento esta correcto                 
                       EXEC xpValSAMXMLCFDI @Empresa,@CadenaXML,@OK OUTPUT,@OKref OUTPUT    
        
-        IF @Debug=1  
+                    IF @Debug=1  
                        SELECT @NombreDoc, @ok, @okref,@Proveedor     
   
                       --Se ejecuta el validador de documentos XML que no cumplen los requisitos del primer validador  
                       IF @OK IS NOT NULL  
-             BEGIN  
+                       BEGIN  
                          SELECT @ok=null,  
-              @OKref=null  
+                                @OKref=null  
   
                          --Se elimina cualquier prefijo encontrado en el documento XML  
                          SELECT @CadenaXML=dbo.fnSAMEliminarPrefijosXML(CAST(DocXML AS VARCHAR(MAX)))    
@@ -333,7 +334,7 @@ WHERE p.ID=@ContProv
                          --Se eliminan caracteres invalidos tales como acentos  
                           SELECT @CadenaXML=dbo.fneDocQuitarAcentos(@CadenaXML)  
        
-             EXEC xpSAMValidaCFDEsp @CadenaXML,@OK OUTPUT,@OKref OUTPUT        
+                          EXEC xpSAMValidaCFDEsp @CadenaXML,@OK OUTPUT,@OKref OUTPUT        
                            
                          IF @Debug=1  
                             SELECT @CadenaXML, @ok, @okref  
@@ -350,10 +351,10 @@ WHERE p.ID=@ContProv
                   ,@OKRef=ERROR_MESSAGE()   
      END CATCH  
   
-      if @Debug=1  
+                if @Debug=1  
                begin  
                    insert @debugvalidaxml  
-               SELECT @NombreDoc, @ok, @okref      
+                        SELECT @NombreDoc, @ok, @okref      
                end  
                --Si el documento es correcto entonces se realiza una segunda comprobacion                
               IF @OK IS NULL         
@@ -370,8 +371,8 @@ WHERE p.ID=@ContProv
                     SELECT @CadenaXML=CAST(DocXML AS VARCHAR(MAX))    
                    FROM #XMLData    
                                       
-    if @Debug=1  
-     select '@CadenaXML',@CadenaXML as '@CadenaXML'  
+                if @Debug=1  
+                 select '@CadenaXML',@CadenaXML as '@CadenaXML'  
                  
                --Se eliminan caracteres invalidos tales como acentos  
                SELECT @CadenaXML=dbo.fneDocQuitarAcentos(@CadenaXML)   
@@ -385,36 +386,39 @@ WHERE p.ID=@ContProv
                 If @OK Is NuLL  
                 begin  
               
-               --Se prepara el XML para su lectura                
-                EXEC sp_xml_preparedocument @hdoc OUTPUT,@XML                
+                if @ClaveCancelacion is null
+                begin
+                    --Se prepara el XML para su lectura                
+                    EXEC sp_xml_preparedocument @hdoc OUTPUT,@XML                
                                       
-               --Se obtiene el UUID del documento XML                
-               SELECT @UUID=UUID                
-               FROM OPENXML (@hdoc, '/Comprobante/Complemento/TimbreFiscalDigital',1)                
-                   WITH (                
-                        UUID      NVARCHAR(100)                
-                   )                
+                   --Se obtiene el UUID del documento XML                
+                   SELECT @UUID=UUID                
+                   FROM OPENXML (@hdoc, '/Comprobante/Complemento/TimbreFiscalDigital',1)                
+                       WITH (                
+                            UUID    NVARCHAR(100)                
+                       )                
                                
-                   SELECT @Fecha= Fecha                
-                         ,@TipoComprobante=TipoDeComprobante                
-                         ,@Total=Total                
-                         ,@Folio=Folio                
-                   FROM OPENXML (@hdoc, '/Comprobante',1)                
-                   WITH (                
-                        Folio               VARCHAR(100),                
-                        Fecha               DATETIME,                
-                        TipoDeComprobante   VARCHAR(100),                
-                        Total               FLOAT                
-                   )         
+                       SELECT @Fecha= Fecha                
+                             ,@TipoComprobante=TipoDeComprobante                
+                             ,@Total=Total                
+                             ,@Folio=Folio                
+                       FROM OPENXML (@hdoc, '/Comprobante',1)                
+                       WITH (                
+                            Folio               VARCHAR(100),                
+                            Fecha               DATETIME,                
+                            TipoDeComprobante   VARCHAR(100),                
+                            Total               FLOAT                
+                       )         
                                
-                   SELECT @RFCProv=RFC                
-                   FROM OPENXML (@hdoc, '/Comprobante/Emisor',1)                
-                   WITH (                
-                        Rfc   VARCHAR(30)                
-                   )                
-                      
+                       SELECT @RFCProv=RFC                
+                       FROM OPENXML (@hdoc, '/Comprobante/Emisor',1)                
+                       WITH (                
+                            Rfc   VARCHAR(30)                
+                       )                
+                    end  
                     if @Debug=1  
                         SeLEct 'uuid'=@UUID,'rfcprov'=@RFCProv,'total'=@Total,'Folio'=@Folio,'DocXML'=@NombreDoc,'Data_xml' 
+                    
                     --Valida si el tipo de comprobante es vacio   
                         IF @ClaveCancelacion IS NOT NULL  
                           SELECT @TipoComprobante='C',
@@ -469,7 +473,6 @@ WHERE p.ID=@ContProv
                           
                         IF @Debug=1  
                             SELECT @TipoComprobante, @ClaveCancelacion    
-
                      --Valida que el tipo de comprobante sea un complemento de pago, carta porte y no exista su UUID en la tabla de SATXML     
                         IF @TipoComprobante IN ('T','P','E','C')  
                         BEGIN  
@@ -560,7 +563,7 @@ WHERE p.ID=@ContProv
                    WHERE Nombre=@NombreDoc+'.xml'         
         
                 select @ok=null,      
-                    @okref=null      
+                   @okref=null      
                  --BREAK        
               END                
               END try  
@@ -588,7 +591,7 @@ WHERE p.ID=@ContProv
             SET @ContXML=@ContXML+1      
             
              -- Liberamos memoria de la lectura del xml                
-             IF @hdoc IS NOT NULL                
+             IF @hdoc IS NOT NULL and @ClaveCancelacion is null               
                 EXEC sp_xml_removedocument @hdoc    
 
         END                 
@@ -612,4 +615,4 @@ END
   select * from @debugvalidaxml  
                 
 RETURN                
-END       
+END 
