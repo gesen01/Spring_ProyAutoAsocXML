@@ -99,13 +99,14 @@ SELECT @cmd='DIR '+@RutaRepositorio+' /B'
     SELECT p.Proveedor,p.RFC              
     FROM Prov AS p       
     WHERE p.RFC IS NOT NULL  
+    AND p.Estatus='ALTA'
     AND EXISTS(SELECT 1 FROM @RepositorioRFC r WHERE r.RFC=p.RFC)
     UNION ALL              
     SELECT c.Cliente,c.RFC              
     FROM Cte AS c              
     WHERE c.RFC IS NOT NULL   
+    AND c.Estatus='ALTA'
     AND EXISTS(SELECT 1 FROM @RepositorioRFC r WHERE r.RFC=c.RFC)
-
     
 --Se llena toda la tabla de proveedores asignados y sin asignar 
 
@@ -209,7 +210,7 @@ BEGIN
                        @OKref=ERROR_MESSAGE()
               END CATCH
 
-              BEGIN TRY
+      BEGIN TRY
                     
                     --Esta seccion utilizara un script que determinara si el xml es de cancelacion, de ser asi devolvera el codigo de cancelacion en la variable
                    --@OKRef y lo asignara a la variable @clavecancelacion
@@ -312,7 +313,16 @@ BEGIN
                    FROM OPENXML (@hdoc, '/Comprobante/Emisor',1)              
                    WITH (              
                         Rfc   VARCHAR(30)              
-                   )              
+                   )      
+                   
+                   --Valida si la clave de cancelacion tiene datos 
+                        IF @ClaveCancelacion IS NOT NULL  
+                          SELECT @TipoComprobante='C',
+                                 @UUID=null,
+                                 @Folio=null,
+                                 @Fecha=null,
+                                 @Total=0,
+                                 @RFCProv=@RFC       
                                                
                    --Se realiza la validacion para saber si existe el UUID en la tabla SATXML se mueve a validados y se inserta en la tabla de datos              
                    IF EXISTS(SELECT 1 FROM SatXml AS sx WHERE sx.FolioFiscal=@UUID)              
@@ -321,9 +331,10 @@ BEGIN
                         SET @RutaProcXML=@RutaValido+'\'+@NombreDoc+'.xml'              
                         SET @RutaProcPDF=@RutaValido+'\'+@NombreDoc+'.PDF'              
           
-                    --Se insertan datos en la tabla a utilizar oara la asocioacion de movimientos              
-                    INSERT INTO AsociadoXMLSAM(Nombre,Folio,Importe,RFC,Tipo,UUID,FechaTimbrado,FechaRegistro,Asociado)              
-                                    SELECT @NombreDoc+'.xml',@Folio,@Total,@RFCProv,@TipoComprobante,@UUID,@Fecha,CAST(GETDATE() AS DATE),0              
+                    IF NOT EXISTS(SELECT 1 FROM AsociadoXMLSAM WHERE Nombre=@NombreDoc+'.xml' and RFC=@RFC)
+                        --Se insertan datos en la tabla a utilizar oara la asocioacion de movimientos              
+                        INSERT INTO AsociadoXMLSAM(Nombre,Folio,Importe,RFC,Tipo,UUID,FechaTimbrado,FechaRegistro,Asociado)              
+                                        SELECT @NombreDoc+'.xml',@Folio,@Total,@RFCProv,@TipoComprobante,@UUID,@Fecha,CAST(GETDATE() AS DATE),0              
                           
                     --Se copian los documentos PDF y XML a la carpeta de validos              
                         SET @CMD='COPY '+@RutaDocXML+' '+@RutaProcXML              
@@ -347,24 +358,20 @@ BEGIN
                                                 ,Descripcion='Procesado con exito'      
                                                 ,FechaProceso=GETDATE()      
                                         WHERE Nombre=@NombreDOc+'.xml'      
-                                                  
+                                       
                    END              
                    ELSE    
                    BEGIN
-                   	    
-                   	    --Valida si el tipo de comprobante es vacio 
-                   	    IF @TipoComprobante IS NULL AND @ClaveCancelacion IS NOT NULL
-                  	       SELECT @TipoComprobante='C'
-                   	    
                    	 --Valida que el tipo de comprobante sea un complemento de pago, carta porte y no exista su UUID en la tabla de SATXML   
                    	    IF @TipoComprobante IN ('T','P','E','C')
                    	    BEGIN
                    	    	SET @RutaProcXML=@RutaValido+'\'+@NombreDoc+'.xml'              
-                            SET @RutaProcPDF=@RutaValido+'\'+@NombreDoc+'.PDF'              
-          
-                            --Se insertan datos en la tabla a utilizar oara la asocioacion de movimientos              
-                            INSERT INTO AsociadoXMLSAM(Nombre,Folio,Importe,RFC,Tipo,UUID,FechaTimbrado,FechaRegistro,Asociado)              
-                                            SELECT @NombreDoc+'.xml',@Folio,@Total,@RFCProv,@TipoComprobante,@UUID,@Fecha,CAST(GETDATE() AS DATE),0              
+                            SET @RutaProcPDF=@RutaValido+'\'+@NombreDoc+'.PDF' 
+                            
+                            IF NOT EXISTS(SELECT 1 FROM AsociadoXMLSAM WHERE Nombre=@NombreDoc+'.xml' and RFC=@RFC)
+                                --Se insertan datos en la tabla a utilizar oara la asocioacion de movimientos              
+                                INSERT INTO AsociadoXMLSAM(Nombre,Folio,Importe,RFC,Tipo,UUID,FechaTimbrado,FechaRegistro,Asociado)              
+                                                SELECT @NombreDoc+'.xml',isnull(@Folio,''),ISNULL(@Total,0),ISNULL(@RFCProv,@RFC),@TipoComprobante,ISNULL(@UUID,''),ISNULL(@Fecha,CAST(GETDATE() AS DATE)),CAST(GETDATE() AS DATE),0                
                           
                             --Se copian los documentos PDF y XML a la carpeta de validos              
                             SET @CMD='COPY '+@RutaDocXML+' '+@RutaProcXML              
@@ -404,7 +411,7 @@ BEGIN
                               SET @CMD='DEL '+@RutaDocPDF              
                               EXEC MASTER..xp_cmdshell   @CMD, NO_OUTPUT            
                                   
-                          --Se insertan los valores de exitos en la tabla de registro de errores              
+                         --Se insertan los valores de exitos en la tabla de registro de errores              
                           IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml')                                        
                               INSERT INTO AsocXMLSAMLog(Nombre,Proveedor,Rfc, Estatus, Descripcion, FechaProceso)              
                                           SELECT @NombreDoc+'.xml',@Proveedor,@RFC,'NoProcesado','No se encuentra disponible en la tabla de SATXML',GETDATE()       
@@ -468,7 +475,11 @@ BEGIN
                 END                 
               TRUNCATE TABLE #XMLdata              
                         
-            SET @ContXML=@ContXML+1              
+            SET @ContXML=@ContXML+1     
+            
+            -- Liberamos memoria de la lectura del xml              
+             IF @hdoc IS NOT NULL              
+		        EXEC sp_xml_removedocument @hdoc             
         END               
     END  
     END
@@ -479,9 +490,11 @@ BEGIN
  SET @ContProv=@ContProv+1              
 END              
               
-     -- Liberamos memoria de la lectura del xml              
-     IF @hdoc IS NOT NULL              
-		EXEC sp_xml_removedocument @hdoc      
+       
             
 RETURN              
 END     
+
+
+
+
