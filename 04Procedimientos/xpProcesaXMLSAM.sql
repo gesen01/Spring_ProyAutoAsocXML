@@ -8,42 +8,42 @@ GO
 IF EXISTS(SELECT * FROM sysobjects WHERE TYPE='p' AND NAME='xpProcesaXMLSAM') 
 DROP PROCEDURE xpProcesaXMLSAM
 GO
-CREATE PROCEDURE [dbo].[xpProcesaXMLSAM]       
+CREATE PROCEDURE xpProcesaXMLSAM         
    @Empresa  VARCHAR(10)     
-AS                    
+AS                
 BEGIN                
  DECLARE @cmd    VARCHAR(500),                
-        @Ruta    VARCHAR(255),                
-        @RutaValido   VARCHAR(255),                
-        @RutaInvalido  VARCHAR(255),                  
-        @RutaRepositorio    VARCHAR(255),  
-        @NumProv   INT,                
-        @ContProv   INT=1,                
-        @NumDocsxML   INT,                
-        @ContXML   INT,                
-        @RFC    VARCHAR(15),                
-        @Proveedor   VARCHAR(10),                
-        @DocXML    VARCHAR(150),                
-        @cmdSQL    VARCHAR(MAX),                
-        @Apostofre   VARCHAR(1),                
-        @RutaDocXML   VARCHAR(1500),                
-        @RutaDocPDF   VARCHAR(1500),                
-        @RutaProcXML  VARCHAR(1500),                
-        @RutaProcPDF  VARCHAR(1500),                
-        @CadenaXML   VARCHAR(MAX),                
-        @XML    XML,                
-        @Folio    VARCHAR(15),                
-        @UUID    VARCHAR(50),                
-        @Fecha    DATETIME,                
-        @TipoComprobante    VARCHAR(10),                
-        @Total    FLOAT,                
-        @NombreDoc   VARCHAR(255),                
-        @RFCProv   VARCHAR(20),                
-        @OK     INT,                
-        @OKref    VARCHAR(255),  
-        @hdoc     INT,  
-        @ClaveCancelacion   VARCHAR(10),  
-        @XMLCancelado   VARCHAR(MAX)  
+    @Ruta    VARCHAR(255),                
+    @RutaValido   VARCHAR(255),                
+    @RutaInvalido  VARCHAR(255),                  
+    @RutaRepositorio    VARCHAR(255),  
+    @NumProv   INT,                
+    @ContProv   INT=1,                
+    @NumDocsxML   INT,                
+    @ContXML   INT,                
+    @RFC    VARCHAR(15),                
+    @Proveedor   VARCHAR(10),                
+    @DocXML    VARCHAR(150),                
+    @cmdSQL    VARCHAR(MAX),                
+    @Apostofre   VARCHAR(1),                
+    @RutaDocXML   VARCHAR(1500),                
+    @RutaDocPDF   VARCHAR(1500),                
+    @RutaProcXML  VARCHAR(1500),                
+    @RutaProcPDF  VARCHAR(1500),                
+    @CadenaXML   VARCHAR(MAX),                
+    @XML    XML,                
+    @Folio    VARCHAR(15),                
+    @UUID    VARCHAR(50),                
+    @Fecha    DATETIME,                
+    @TipoComprobante    VARCHAR(10),                
+    @Total    FLOAT,                
+    @NombreDoc   VARCHAR(255),                
+    @RFCProv   VARCHAR(20),                
+    @OK     INT,                
+    @OKref    VARCHAR(255),  
+    @hdoc     INT,  
+    @ClaveCancelacion   VARCHAR(10),  
+    @XMLCancelado   VARCHAR(MAX)  
                  
                     
 DECLARE @ProvAcre    TABLE (  
@@ -76,13 +76,6 @@ DECLARE @ArchivosXML    TABLE (
 CREATE TABLE #XMLData(                
         DocXML  xml                
 )         
-  
-declare @debugvalidaxml table(  
- docxml varchar(255),  
- ok  int,  
- okref varchar(255)  
-)  
-  
                
 SELECT @Apostofre=CHAR(39)         
   
@@ -97,9 +90,9 @@ SELECT @cmd='DIR '+@RutaRepositorio+' /B'
 --Se lee la carpeta y se insertan el nombre de las carpetas (RFC) del repositorio                      
     INSERT INTO @RepositorioRFC(RFC)                      
     EXEC MASTER..xp_cmdshell @cmd    
-                   
---Se insertan los RFC y proveedores a procesar            
-       
+   
+                
+--Se insertan los RFC y proveedores a procesar
     INSERT INTO @ProvAcre  
     SELECT p.Proveedor,p.RFC                
     FROM Prov AS p         
@@ -112,9 +105,8 @@ SELECT @cmd='DIR '+@RutaRepositorio+' /B'
     WHERE c.RFC IS NOT NULL   
     And c.Estatus='ALTA'
     AND EXISTS(SELECT 1 FROM @RepositorioRFC r WHERE r.RFC=c.RFC)  
-
       
---Se llena toda la tabla de proveedores asignados y sin asignar 
+--Se llena toda la tabla de proveedores asignados y sin asignar   
 INSERT INTO @ProveedoresRFC  
     SELECT p.Proveedor   
           ,p.RFC  
@@ -124,20 +116,19 @@ INSERT INTO @ProveedoresRFC
           ,r.RFC  
     FROM @RepositorioRFC r  
     WHERE NOT EXISTS(SELECT 1 FROM @ProvAcre p WHERE p.RFC=r.RFC)   
-    AND r.RFC IS NOT NULL  
-  
-
+    AND r.RFC IS NOT NULL     
+                          
 --Se contabiliza cuantos proveedores se van a procesar                
 SELECT @NumProv=COUNT(p.rfc)                      
-FROM @ProveedoresRFC AS p        
-
+FROM @ProveedoresRFC AS p 
+                
 --Se genera un ciclo que permitira procesar cada proveedor                
 WHILE @ContProv <= @NumProv                
 BEGIN                
  SELECT @Proveedor=Proveedor                
         ,@RFC=p.RFC                
- FROM @ProveedoresRFC AS p                
- WHERE p.ID=@ContProv                 
+FROM @ProveedoresRFC AS p                
+WHERE p.ID=@ContProv                 
                 
     --Se obtinene las ruta de las carpetas  a donde se procesaran los documentos XML                 
     SELECT @Ruta=REPLACE(RutaRepositorioProc,'<rfc>',@RFC)                
@@ -155,8 +146,9 @@ BEGIN
              
     --Se lee la carpeta y se insertan los documentos que se tienen                
     INSERT INTO @DocsXML(DocXML)                
-    EXEC MASTER..xp_cmdshell @cmd     
-  
+        EXEC MASTER..xp_cmdshell @cmd     
+      
+    
     IF EXISTS(SELECT 1 FROM @DocsXML)   
     BEGIN     
   
@@ -166,19 +158,19 @@ BEGIN
     FROM @DocsXML AS dx                       
     WHERE dx.DocXML IS NOT NULL                      
     AND UPPER(SUBSTRING(dx.DocXML,CHARINDEX('.',dx.DocXML,1)+1,3))='XML'    
-      
-    IF NOT EXISTS(SELECT 1 FROM @ArchivosXML)  
+        
+    IF NOT EXISTS (SELECT 1 FROM @ArchivosXML)
     BEGIN  
          WITH docsXml  
-         AS(  
-            select distinct ReversE(right(REVERSE(DocXML),Len(DocXML)-4))+'.xml' AS 'nombreinvertido',  
-                    ReversE(right(REVERSE(DocXML),Len(DocXML)-4)) As 'edocname'  
-            from @DocsXML  
-            where DocXML is not null  
+        AS(  
+            SELECT DISTINCT REVERSE(RIGHT(REVERSE(DocXML),LEN(DocXML)-4))+'.xml' AS 'nombreinvertido',  
+                    REVERSE(RIGHT(REVERSE(DocXML),LEN(DocXML)-4)) As 'edocname'  
+            FROM @DocsXML  
+            WHERE DocXML IS NOT NULL  
         )  
         INSERT INTO @ArchivosXML  
         SELECT ROW_NUMBER() OVER (ORDER BY nombreinvertido),edocname  
-        FROM docsXml  
+        FRoM docsXml  
     END  
                  
     --Se contabiliza cuantos documentos xml se tienen a procesar                
@@ -187,7 +179,7 @@ BEGIN
                        
     --Se asigna el contador para el ciclo que analizara y validara los XML en 1                   
     SET @ContXML=1           
-              
+                    
     IF ISNULL(@NumDocsxML,0) > 0              
     BEGIN                
         --Se crea un ciclo para la validacion de cada xml que se tenga en la carpeta                
@@ -200,7 +192,7 @@ BEGIN
                    ,@NombreDoc=dx.eDocName                
             FROM @ArchivosXML AS dx                
             WHERE dx.ID=@ContXML                
-  
+ 
             --Se realiza la insercion de los datos en la tablan #XMLData de tipo XML                
             SET @cmdSQL='INSERT INTO #XMLData                
                                 SELECT P                 
@@ -216,7 +208,7 @@ BEGIN
                    BEGIN  
                         SELECT @OK=NULL,  
                                @OKRef=NULL,
-                               @ClaveCancelacion=NULL
+                               @ClaveCancelacion=null
                                  
                                SELECT @XMLCancelado=CAST(DocXML AS VARCHAR(MAX))              
                                 FROM #XMLData   
@@ -226,23 +218,25 @@ BEGIN
                                IF @OK IS NOT NULL  
                                 SELECT @ClaveCancelacion=@OKRef   
                    END  
-                     
-                  IF @OK IS NULL AND @ClaveCancelacion IS NULL  
+                
+                  IF @OK IS NULL And @ClaveCancelacion IS NULL  
                   BEGIN   
                       SELECT @OK=NULL,  
                              @OKRef=NULL  
-                        
-                       --Se asigna la variable con el texto del XML                 
+        
+               --Se asigna la variable con el texto del XML                 
                       --SELECT @CadenaXML=CAST(DocXML AS VARCHAR(MAX))              
                       --FROM #XMLData      
                                            
-                      --Se eliminan caracteres invalidos tales como acentos  
+                      --Se eliminan caracteres invalidos tales como acentos 
                        SELECT @CadenaXML=dbo.fneDocQuitarAcentos(CAST(DocXML AS VARCHAR(MAX)))  
                        FROM #XMLData   
-   
+
+                       SELECT @CadenaXML=dbo.fnSAMEliminarAddendaXML(@CadenaXML)
+                          
                       --Se ejecuta la validacion del XML a fin de comprobar que el documento esta correcto                 
-                      EXEC xpValSAMXMLCFDI @Empresa,@CadenaXML,@OK OUTPUT,@OKref OUTPUT   
-  
+                      EXEC xpValSAMXMLCFDI @Empresa,@CadenaXML,@OK OUTPUT,@OKref OUTPUT    
+       
                       --Se ejecuta el validador de documentos XML que no cumplen los requisitos del primer validador  
                       IF @OK IS NOT NULL  
                       BEGIN  
@@ -251,15 +245,16 @@ BEGIN
   
                          --Se elimina cualquier prefijo encontrado en el documento XML  
                          SELECT @CadenaXML=dbo.fnSAMEliminarPrefijosXML(CAST(DocXML AS VARCHAR(MAX)))    
-                         FROM #XMLData    
+                         FROM #XMLData 
+                         
+                         SELECT @CadenaXML=dbo.fnSAMEliminarAddendaXML(@CadenaXML)
                   
                          --Se eliminan caracteres invalidos tales como acentos  
                           SELECT @CadenaXML=dbo.fneDocQuitarAcentos(@CadenaXML)  
        
                           EXEC xpSAMValidaCFDEsp @CadenaXML,@OK OUTPUT,@OKref OUTPUT        
                            
-                
-                      END  
+                     END  
                   END  
                   ELSE  
                   BEGIN  
@@ -276,23 +271,28 @@ BEGIN
               BEGIN     
                BEGIN TRY  
                --Se elimina cualquier prefijo encontrado en el documento XML  
-                IF @ClaveCancelacion IS NULL  
+                If @ClaveCancelacion IS NULL  
                 BEGIN  
                    --Se elimina cualquier prefijo encontrado en el documento XML  
-                   SELECT @CadenaXML=dbo.fnSAMEliminarPrefijosXML(CAST(DocXML AS VARCHAR(MAX)))    
-                    FROM #XMLData    
+                   SELECT @CadenaXML=CAST(DocXML AS VARCHAR(MAX))    
+                    FROM #XMLData   
+                                     
+                    SELECT @CadenaXML=dbo.fnSAMEliminarAddendaXML(@CadenaXML)
+                    
+                    SELECT @CadenaXML=dbo.fnSAMEliminarPrefijosXML(@CadenaXML)
+
                 END  
-                ELSE  
+                ELSE 
                     SELECT @CadenaXML=CAST(DocXML AS VARCHAR(MAX))    
                     FROM #XMLData    
-                 
+                
                --Se eliminan caracteres invalidos tales como acentos  
                SELECT @CadenaXML=dbo.fneDocQuitarAcentos(@CadenaXML)   
                       
                --Se reasigna la variable XML con la cadena de tipo XML                
-               SELECT @XML=CAST(@CadenaXML AS XML) 
-  
-                IF @OK IS NULL  
+                SELECT @XML=CAST(@CadenaXML AS XML)      
+                  
+                If @OK IS NULL  
                 BEGIN  
               
                 IF @ClaveCancelacion IS NULL
@@ -300,7 +300,7 @@ BEGIN
                     --Se prepara el XML para su lectura                
                     EXEC sp_xml_preparedocument @hdoc OUTPUT,@XML                
                                       
-                   --Se obtiene el UUID del documento XML                
+                   --Se obtiene el UUID del documento XML  
                    SELECT @UUID=UUID                
                    FROM OPENXML (@hdoc, '/Comprobante/Complemento/TimbreFiscalDigital',1)                
                        WITH (                
@@ -324,7 +324,7 @@ BEGIN
                        WITH (                
                             Rfc   VARCHAR(30)                
                        )                
-                 END  
+                    END  
                     
                     --Valida si el tipo de comprobante es vacio   
                         IF @ClaveCancelacion IS NOT NULL  
@@ -351,11 +351,11 @@ BEGIN
                     --Se copian los documentos PDF y XML a la carpeta de validos                
                         SET @CMD='COPY '+@RutaDocXML+' '+@RutaProcXML                
                         EXEC MASTER..xp_cmdshell   @CMD, NO_OUTPUT   
-                            
+                          
                         SET @CMD='DEL '+@RutaDocXML                
                         EXEC MASTER..xp_cmdshell   @CMD, NO_OUTPUT                
                                         
-                        SET @CMD='COPY '+@RutaDocPDF+' '+@RutaProcPDF                
+                        SET @CMD='COPY '+@RutaDocPDF+' '+@RutaProcPDF         
                         EXEC MASTER..xp_cmdshell   @CMD, NO_OUTPUT                 
                         SET @CMD='DEL '+@RutaDocPDF                
                         EXEC MASTER..xp_cmdshell   @CMD, NO_OUTPUT                 
@@ -374,7 +374,7 @@ BEGIN
                    END                
                    ELSE      
                    BEGIN  
-                              
+                          
                      --Valida que el tipo de comprobante sea un complemento de pago, carta porte y no exista su UUID en la tabla de SATXML     
                         IF @TipoComprobante IN ('T','P','E','C')  
                         BEGIN  
@@ -387,7 +387,7 @@ BEGIN
                                                     SELECT @NombreDoc+'.xml',isnull(@Folio,''),isnull(@Total,0),isnull(@RFCProv,@Rfc),@TipoComprobante,isnull(@UUID,''),isnull(@Fecha,CAST(GETDATE() AS DATE)),CAST(GETDATE() AS DATE),0                
                             
                             --Se copian los documentos PDF y XML a la carpeta de validos                
-                                SET @CMD='COPY '+@RutaDocXML+' '+@RutaProcXML                
+                            SET @CMD='COPY '+@RutaDocXML+' '+@RutaProcXML                
                                 EXEC MASTER..xp_cmdshell   @CMD, NO_OUTPUT                 
                                 SET @CMD='DEL '+@RutaDocXML                
                                 EXEC MASTER..xp_cmdshell   @CMD, NO_OUTPUT                
@@ -401,12 +401,12 @@ BEGIN
                             --Se insertan los valores de exitos en la tabla de registro de errores                
                             IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml')                 
                                 INSERT INTO AsocXMLSAMLog(Nombre,Proveedor,rfc, Estatus, Descripcion, FechaProceso)                
-                                              SELECT @NombreDoc,@Proveedor,@RFC,'Procesado','Procesado con exito',GETDATE()        
-                          ELSE      
-                            UPDATE AsocXMLSAMLog SET Estatus='Procesado'      
-                                    ,Descripcion='Procesado con exito'      
-                                    ,FechaProceso=GETDATE()      
-                            WHERE Nombre=@NombreDoc+'.xml'    
+                                              SELECT @NombreDoc,@Proveedor,@RFC,'Procesado','Procesado con exito',GETDATE()     
+                            ELSE      
+                                UPDATE AsocXMLSAMLog SET Estatus='Procesado'      
+                                                        ,Descripcion='Procesado con exito'      
+                                                        ,FechaProceso=GETDATE()      
+                                            WHERE Nombre=@NombreDoc+'.xml'    
                         END  
                         ELSE  
                         BEGIN  
@@ -429,13 +429,13 @@ BEGIN
                               INSERT INTO AsocXMLSAMLog(Nombre,Proveedor,Rfc, Estatus, Descripcion, FechaProceso)                
                                           SELECT @NombreDoc+'.xml',@Proveedor,@RFC,'NoProcesado','No se encuentra disponible en la tabla de SATXML',GETDATE()         
                           ELSE      
-                          UPDATE AsocXMLSAMLog SET Descripcion='No se encuentra disponible en la tabla de SATXML'      
-                                   ,Estatus='NoProcesado'      
-                                ,FechaProceso=GETDATE()      
-                             WHERE Nombre=@NombreDoc+'.xml'      
+                              UPDATE AsocXMLSAMLog SET Descripcion='No se encuentra disponible en la tabla de SATXML'      
+                                                      ,Estatus='NoProcesado'      
+                                                      ,FechaProceso=GETDATE()      
+                                           WHERE Nombre=@NombreDoc+'.xml'      
       
-                          SELECT @OK=NULL,      
-                             @OKREF=NULL      
+                            SELECT @ok=NULL,      
+                                   @okref=NULL      
                         END  
                  END      
               END                
@@ -458,14 +458,14 @@ BEGIN
                 --Se insertan los valores de exitos en la tabla de registro de errores                
                 IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml')                 
                     INSERT INTO AsocXMLSAMLog(Nombre,Proveedor,Rfc, Estatus, Descripcion, FechaProceso)                
-                                       SELECT @NombreDoc+'.xml',@Proveedor,@RFC,'NoProcesado',CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,''),GETDATE()        
+                                      SELECT @NombreDoc+'.xml',@Proveedor,@RFC,'NoProcesado',CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,''),GETDATE()        
                 ELSE        
                    UPDATE AsocXMLSAMLog SET Descripcion = CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,'')        
                                             ,FechaProceso = GETDATE()        
                    WHERE Nombre=@NombreDoc+'.xml'         
         
-                SELECT @OK=NULL,      
-                       @OKRef=NULL      
+                SELECT @ok=NULL,      
+                       @okref=NULL      
                  --BREAK        
               END                
               END TRY  
@@ -475,7 +475,7 @@ BEGIN
                      ,@OKRef=ERROR_MESSAGE()   
   
               END CATCH  
-              IF @OK is not null  
+              if @OK IS NOT NULL  
               BEGIN  
   
                 --Se insertan los valores de exitos en la tabla de registro de errores                
@@ -502,9 +502,9 @@ BEGIN
                     
  DELETE FROM @DocsXML                
  DELETE FROM @ArchivosXML            
-   
+                 
  SET @ContProv=@ContProv+1                
-END                
-                
+END              
+
 RETURN                
-END    
+END 
