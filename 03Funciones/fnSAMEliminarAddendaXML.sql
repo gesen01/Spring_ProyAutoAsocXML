@@ -24,14 +24,14 @@ BEGIN
     -- 1. Encontrar la posición de "<" + cualquier prefijo + ":Addenda"
     -- Usamos CHARINDEX con un comodín parcial si fuera necesario, 
     -- pero buscaremos la estructura común "Addenda"
-    SET @PosInicio = CHARINDEX('<', @Resultado, CHARINDEX('Addenda', @Resultado) - 10);
+    SET @PosInicio = CHARINDEX('<', @Resultado, CHARINDEX(':Addenda', @Resultado) - 10);
     
     -- Si no encuentra "Addenda", salir
     IF @PosInicio = 0 OR CHARINDEX('Addenda', @Resultado) = 0
         RETURN @Resultado;
 
     -- 2. Encontrar el cierre de la etiqueta inicial ">"
-    SET @PosInicio = CHARINDEX('<', @Resultado, CHARINDEX('Addenda', @Resultado) - 10);
+    SET @PosInicio = CHARINDEX('<', @Resultado, CHARINDEX(':Addenda', @Resultado) - 10);
     SET @PosFin = CHARINDEX('>', @Resultado, @PosInicio);
 
     -- 3. Identificar el prefijo/nombre completo de la etiqueta de cierre </...Addenda>
@@ -57,7 +57,11 @@ BEGIN
         -- Usamos SUBSTRING para reconstruir la cadena sin la addenda
         SET @Resultado = SUBSTRING(@Resultado, 1, @PosInicio - 1) + 
                          SUBSTRING(@Resultado, @PosFin + LEN(@EtiquetaCierre), LEN(@Resultado));
+ 
     END
+    
+    IF CHARINDEX('</cfdi:Addenda>',@Resultado) > 1
+        SET @Resultado=REPLACE(@Resultado,'</cfdi:Addenda>','')
 
     RETURN @Resultado;
 END;
