@@ -124,7 +124,7 @@ BEGIN
     AND EXISTS(SELECT 1 FROM @RepositorioRFC r WHERE r.RFC=c.RFC)  
 END 
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM SAMCantidadDocsXMLproc WHERE NumDocs between 1 and 2)
+    IF NOT EXISTS(SELECT 1 FROM SAMCantidadDocsXMLproc WHERE NumDocs=8)
         INSERT INTO @ProvAcre                
         SELECT p.Proveedor,p.RFC                
         FROM Prov AS p  
@@ -134,7 +134,7 @@ BEGIN
         INSERT INTO @ProvAcre                
         SELECT p.Proveedor,p.RFC                
         FROM Prov AS p  
-        WHERE EXISTS(SELECT 1 FROM SAMCantidadDocsXMLproc s WHERE p.RFC=s.RFC AND NumDocs between 1 and 2)    
+        WHERE EXISTS(SELECT 1 FROM SAMCantidadDocsXMLproc s WHERE p.RFC=s.RFC AND NumDocs=8)    
         And p.estatus='Alta'
 END
 
@@ -145,7 +145,7 @@ IF @Debug=1
 --Se llena toda la tabla de proveedores asignados y sin asignar   
 IF @Debug<>1
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM SAMCantidadDocsXMLproc WHERE NumDocs between 1 and 2)
+    IF NOT EXISTS(SELECT 1 FROM SAMCantidadDocsXMLproc WHERE NumDocs=6)
         INSERT INTO @ProveedoresRFC  
         SELECT p.Proveedor   
               ,p.RFC  
@@ -165,12 +165,13 @@ BEGIN
         SELECT 'SINASIGNAR'  
               ,r.RFC  
         FROM @RepositorioRFC r  
-        WHERE EXISTS(SELECT 1 FROM SAMCantidadDocsXMLproc s WHERE r.RFC=s.RFC AND NumDocs between 1 and 2)   
+        WHERE EXISTS(SELECT 1 FROM SAMCantidadDocsXMLproc s WHERE r.RFC=s.RFC AND NumDocs=8)
+        and NOT EXISTS(SELECT 1 FROM @ProvAcre p WHERE p.RFC=r.RFC)
         AND r.RFC IS NOT NULL
 END
 ELSE
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM SAMCantidadDocsXMLproc WHERE NumDocs between 1 and 2)
+    IF NOT EXISTS(SELECT 1 FROM SAMCantidadDocsXMLproc WHERE NumDocs=8)
         INSERT INTO @ProveedoresRFC  
         SELECT p.Proveedor  
                ,p.RFC  
@@ -184,11 +185,12 @@ BEGIN
         SELECT p.Proveedor  
                ,p.RFC  
         FROM @ProvAcre p   
-        UNION ALL  
+        UNION   
         SELECT 'SINASIGNAR'  
               ,r.RFC  
         FROM @RepositorioRFC r  
-        WHERE EXISTS(SELECT 1 FROM SAMCantidadDocsXMLproc s WHERE r.RFC=s.RFC AND NumDocs between 1 and 2)   
+        WHERE EXISTS(SELECT 1 FROM SAMCantidadDocsXMLproc s WHERE r.RFC=s.RFC AND NumDocs=8)  
+        And NOT EXISTS(SELECT 1 FROM @ProvAcre p WHERE p.RFC=r.RFC)
         AND r.RFC IS NOT NULL 
         
 END
@@ -196,7 +198,7 @@ END
 IF @Debug=1  
     SELECT *,'Proveedores RFC'  
     FROM @ProveedoresRFC  
-    order by RFC  
+    order by ID  
                           
 --Se contabiliza cuantos proveedores se van a procesar                
 SELECT @NumProv=COUNT(p.rfc)                      
@@ -220,9 +222,9 @@ WHERE p.ID=@ContProv
     FROM ConfigAsociacionXMLSAM                
     WHERE Empresa=@Empresa                
               
- --SELECT  @Ruta=REPLACE(@Ruta,'Y:\','\\192.168.9.245\ArchCFD\Proveedores\')                
- --         ,@RutaValido=REPLACE(@RutaValido,'Y:\','\\192.168.9.245\ArchCFD\Proveedores\')                
- --         ,@RutaInvalido=REPLACE(@RutaInvalido,'Y:\','\\192.168.9.245\ArchCFD\Proveedores\')               
+ --SELECT  @Ruta=REPLACE(@Ruta,'Y:\','\\192.1610.9.245\ArchCFD\Proveedores\')                
+ --         ,@RutaValido=REPLACE(@RutaValido,'Y:\','\\192.1610.9.245\ArchCFD\Proveedores\')                
+ --         ,@RutaInvalido=REPLACE(@RutaInvalido,'Y:\','\\192.1610.9.245\ArchCFD\Proveedores\')               
                     
     --Se arma la cadena para la lectura de la carpeta                 
     SELECT @cmd='DIR '+@Ruta+' /B'        
@@ -308,30 +310,27 @@ WHERE p.ID=@ContProv
                         @OKref=ERROR_MESSAGE()  
               end catch  
   
+                if @Debug=1 and exists(select 1 from #XMLData)  
+                select '#XMLData',*  
+                from #XMLData  
+
               if @Debug=1  
                   select @OK as '@OK',  
                         @OKref as '@OKref'   
-                
-  
-              if @Debug=1 and exists(select 1 from #XMLData)  
-                select '#XMLData',*  
-                from #XMLData  
-               
-              
 
               BEGIN TRY  
-                      
-                    --Esta seccion utilizara un script que determinara si el xml es de cancelacion, de ser asi devolvera el codigo de cancelacion en la variable  
+                   --Esta seccion utilizara un script que determinara si el xml es de cancelacion, de ser asi devolvera el codigo de cancelacion en la variable  
                    --@OKRef y lo asignara a la variable @clavecancelacion  
                    IF @OK IS NULL  
                    BEGIN  
+                       
                         SELECT @OK=NULL,  
                                @OKRef=NULL,
                                @ClaveCancelacion=null
                                  
                                SELECT @XMLCancelado=CAST(DocXML AS VARCHAR(MAX))              
-                                FROM #XMLData   
-                                 
+                                FROM #XMLData 
+                                                                 
                                EXEC xpXMLCanceladosSAM @XMLCancelado,@OK OUTPUT,@OKref OUTPUT  
                                  
                                IF @Debug=1  
@@ -485,7 +484,7 @@ WHERE p.ID=@ContProv
                        FROM OPENXML (@hdoc, '/Comprobante/Emisor',1)                
                        WITH (                
                             Rfc   VARCHAR(30)                
-                       )                
+              )                
                     end  
                     if @Debug=1  
                         SeLEct 'uuid'=@UUID,'rfcprov'=@RFCProv,'total'=@Total,'Folio'=@Folio,'DocXML'=@NombreDoc,'Data_xml' 
@@ -657,7 +656,7 @@ WHERE p.ID=@ContProv
                                        SELECT @NombreDoc+'.xml',@Proveedor,@RFC,'NoProcesado',CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,''),GETDATE()        
                 ELSE        
                    UPDATE AsocXMLSAMLog SET Descripcion = CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,'')        
-                                            ,FechaProceso = GETDATE()        
+                  ,FechaProceso = GETDATE()        
                    WHERE Nombre=@NombreDoc+'.xml'   
                 end 
                 end         
@@ -677,7 +676,11 @@ WHERE p.ID=@ContProv
                  
               TRUNCATE TABLE #XMLdata                
                           
-            SET @ContXML=@ContXML+1 
+            SET @ContXML=@ContXML+1      
+            
+                             
+                
+
         END                 
     END    
     END  
