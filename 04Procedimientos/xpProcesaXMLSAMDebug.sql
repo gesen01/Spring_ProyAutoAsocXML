@@ -145,7 +145,7 @@ IF @Debug=1
 --Se llena toda la tabla de proveedores asignados y sin asignar   
 IF @Debug<>1
 BEGIN
-    IF NOT EXISTS(SELECT 1 FROM SAMCantidadDocsXMLproc WHERE NumDocs=6)
+    IF NOT EXISTS(SELECT 1 FROM SAMCantidadDocsXMLproc WHERE NumDocs=8)
         INSERT INTO @ProveedoresRFC  
         SELECT p.Proveedor   
               ,p.RFC  
@@ -482,7 +482,7 @@ WHERE p.ID=@ContProv
                                
                        SELECT @RFCProv=RFC                
                        FROM OPENXML (@hdoc, '/Comprobante/Emisor',1)                
-                       WITH (                
+                WITH (                
                             Rfc   VARCHAR(30)                
               )                
                     end  
@@ -529,21 +529,24 @@ WHERE p.ID=@ContProv
                                     
                                     
                     --Se insertan los valores de exitos en la tabla de registro de errores                
-                    IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml')                 
+                    IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml' AND RFC=@RFC)                 
                         INSERT INTO AsocXMLSAMLog(Nombre,Proveedor, Rfc,Estatus, Descripcion, FechaProceso)                
                                       SELECT @NombreDoc+'.xml',@Proveedor,@RFC,'Procesado','Procesado con exito',GETDATE()         
                     ELSE        
                         UPDATE AsocXMLSAMLog SET Estatus='Procesado'        
                                                 ,Descripcion='Procesado con exito'        
-                                                ,FechaProceso=GETDATE()        
-                                        WHERE Nombre=@NombreDOc+'.xml'        
+                                                ,FechaProceso=GETDATE()   
+                                                ,RFC=@RFC
+                                                ,proveedor=@proveedor
+                                        WHERE Nombre=@NombreDOc+'.xml'      
+                                        and proveedor=@proveedor
                                                     
                    END                
                    ELSE      
                    BEGIN  
                          
                         IF @Debug=1  
-                            SELECT @TipoComprobante, @ClaveCancelacion    
+                         SELECT @TipoComprobante, @ClaveCancelacion    
                      --Valida que el tipo de comprobante sea un complemento de pago, carta porte y no exista su UUID en la tabla de SATXML     
                         IF @TipoComprobante IN ('T','P','E','C')  
                         BEGIN  
@@ -568,14 +571,17 @@ WHERE p.ID=@ContProv
                                     
                                     
                             --Se insertan los valores de exitos en la tabla de registro de errores                
-                            IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml')           
+                            IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml' AND RFC=@RFC)           
                                     INSERT INTO AsocXMLSAMLog(Nombre,Proveedor,rfc, Estatus, Descripcion, FechaProceso)                
                                               SELECT @NombreDoc,@Proveedor,@RFC,'Procesado','Procesado con exito',GETDATE()     
               ELSE      
                 UPDATE AsocXMLSAMLog SET Estatus='Procesado'      
-                ,Descripcion='Procesado con exito'      
-           ,FechaProceso=GETDATE()      
-            WHERE Nombre=@NombreDoc+'.xml'    
+                                        ,Descripcion='Procesado con exito'      
+                                        ,FechaProceso=GETDATE()    
+                                        ,RFC=@RFC
+                                        ,proveedor=@proveedor
+                        WHERE Nombre=@NombreDoc+'.xml'  
+                        and proveedor=@proveedor
                         END  
                         ELSE  
                         BEGIN  
@@ -591,17 +597,20 @@ WHERE p.ID=@ContProv
                               SET @CMD='COPY '+@RutaDocPDF+' '+@RutaProcPDF                
                               EXEC MASTER..xp_cmdshell   @CMD, NO_OUTPUT                 
                               SET @CMD='DEL '+@RutaDocPDF                
-                              EXEC MASTER..xp_cmdshell   @CMD, NO_OUTPUT              
+                              EXEC MASTER..xp_cmdshell   @CMD, NO_OUTPUT             
                                     
                           --Se insertan los valores de exitos en la tabla de registro de errores                
-                          IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml')                                          
+                          IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml' AND RFC=@RFC)                                          
                               INSERT INTO AsocXMLSAMLog(Nombre,Proveedor,Rfc, Estatus, Descripcion, FechaProceso)                
                                           SELECT @NombreDoc+'.xml',@Proveedor,@RFC,'NoProcesado','No se encuentra disponible en la tabla de SATXML',GETDATE()         
                           ELSE      
                           UPDATE AsocXMLSAMLog SET Descripcion='No se encuentra disponible en la tabla de SATXML'      
-                                   ,Estatus='NoProcesado'      
-                                ,FechaProceso=GETDATE()      
-                             WHERE Nombre=@NombreDoc+'.xml'      
+                                                  ,Estatus='NoProcesado'      
+                                                  ,FechaProceso=GETDATE()  
+                                                  ,RFC=@RFC
+                                                  ,proveedor=@proveedor
+                             WHERE Nombre=@NombreDoc+'.xml'   
+                             and proveedor=@proveedor
       
                           select @ok=null,      
                              @okref=null      
@@ -625,13 +634,17 @@ WHERE p.ID=@ContProv
                     EXEC MASTER..xp_cmdshell   @CMD, NO_OUTPUT                 
                                     
                 --Se insertan los valores de exitos en la tabla de registro de errores        
-             IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml')                 
+             IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml' AND RFC=@RFC)                 
                     INSERT INTO AsocXMLSAMLog(Nombre,Proveedor,Rfc, Estatus, Descripcion, FechaProceso)                
                                       SELECT @NombreDoc+'.xml',@Proveedor,@RFC,'NoProcesado',CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,''),GETDATE()        
                 ELSE        
                    UPDATE AsocXMLSAMLog SET Descripcion = CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,'')        
-                                            ,FechaProceso = GETDATE()        
-                   WHERE Nombre=@NombreDoc+'.xml'         
+                                            ,FechaProceso = GETDATE() 
+                                            ,Estatus='NoProcesado' 
+                                            ,RFC=@RFC
+                                            ,proveedor=@proveedor
+                   WHERE Nombre=@NombreDoc+'.xml'    
+                   and proveedor=@proveedor
         
                 select @ok=null,      
                    @okref=null      
@@ -651,27 +664,34 @@ WHERE p.ID=@ContProv
               begin  
 
                 --Se insertan los valores de exitos en la tabla de registro de errores                
-                IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml')                 
+                IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml' AND RFC=@RFC)                 
                     INSERT INTO AsocXMLSAMLog(Nombre,Proveedor,Rfc, Estatus, Descripcion, FechaProceso)                
                                        SELECT @NombreDoc+'.xml',@Proveedor,@RFC,'NoProcesado',CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,''),GETDATE()        
                 ELSE        
                    UPDATE AsocXMLSAMLog SET Descripcion = CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,'')        
-                  ,FechaProceso = GETDATE()        
+                                           ,FechaProceso = GETDATE()  
+                                           ,Estatus='NoProcesado'  
+                                           ,RFC=@RFC
+                                           ,proveedor=@proveedor
                    WHERE Nombre=@NombreDoc+'.xml'   
+                   and proveedor=@proveedor
                 end 
                 end         
               --Esta validacion inserta aquellos documentos en el log cuyo nombre es invalido por caracteres no validos y los deja en la carpeta de PorValidar
               if @OK is not null  
               begin  
                     --Se insertan los valores de exitos en la tabla de registro de errores                
-                    IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml')                 
+                    IF NOT EXISTS(SELECT 1 FROM AsocXMLSAMLog WHERE Nombre=@NombreDoc+'.xml' AND RFC=@RFC)                 
                        INSERT INTO AsocXMLSAMLog(Nombre,Proveedor,Rfc, Estatus, Descripcion, FechaProceso)                
                                            SELECT @NombreDoc+'.xml',@Proveedor,@RFC,'NoProcesado',CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,''),GETDATE()        
                     ELSE        
                        UPDATE AsocXMLSAMLog SET Descripcion = CAST(@OK AS VARCHAR(10))+' '+ISNULL(@OKRef,'')        
                                                 ,FechaProceso = GETDATE()  
                                                 ,Estatus='NoProcesado'
-                       WHERE Nombre=@NombreDoc+'.xml'   
+                                                ,RFC=@RFC
+                                                ,proveedor=@proveedor
+                       WHERE Nombre=@NombreDoc+'.xml'  
+                       and proveedor=@proveedor
                 end
                  
               TRUNCATE TABLE #XMLdata                
